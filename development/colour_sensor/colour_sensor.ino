@@ -1,7 +1,7 @@
 int rgbBaselines[4][4]; // Each row contains measurements for a different block, each column is a given set of conditions 
-const int analogPR = 1;
-const int outR = 6;
-const int outG = 3;
+const int analogPR = 9;
+const int outG = 6;
+const int outR = 3;
 const int outB = 5;
 const char colourIdStrings[4][15] = {
   "Ambient Dtcd",
@@ -11,7 +11,7 @@ const char colourIdStrings[4][15] = {
 };
 
 void colourId(){
-  int SE[4] = {0,0,0,0};
+  long int SE[4] = {0,0,0,0};
   int sample;
   int numTestCases = 4;
   int T = 100;
@@ -31,7 +31,7 @@ void colourId(){
        sample += analogRead(analogPR);
     }
     for (int c = 0; c < 4; c++){// For each possible colour, add the current squared error for the given test number (i)
-      SE[c] += (sample/5 - rgbBaselines[c][i])^^2; // This may cause overflow, if it does then we might be able to use the absolute error
+      SE[c] += pow((sample/5 - rgbBaselines[c][i]),2); // This may cause overflow, if it does then we might be able to use the absolute error
     }
   }
   // Find the minimum squared error 
@@ -106,7 +106,7 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
   baselineSetUpRoutine();
-  Serial.println("Please put down a block for testing")
+  Serial.println("Please put down a block for testing");
   colourId(); 
 }
 

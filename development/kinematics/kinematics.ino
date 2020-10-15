@@ -178,16 +178,17 @@ void setup()
   //  Serial.println(endEffectorPos[2]);
 
   // Part-2: Inverse kinematics
-  //  float xyz[3] = {22, 0, 6};
-  //  calc_IK(xyz);
+  //    float xyz[3] = {10, 2, 8};
+  //    calc_IK(xyz);
+  //    write_angles();
   //  base_angle = map(jointAngles[0] + 90, 0, 180, 180, 0);
   //  shoulder_angle = map(jointAngles[1], 0, 180, 180, 0);
   //  elbow_angle = map(jointAngles[3] + 90, 0, 180, 180, 0);
 
   // Part-3: line
-  //  float start_p[3] = {22, 0, 6};
-  //  float end_p[3]   = {12, 0, 6};
-  //  line(start_p, end_p, true);
+//  float start_p[3] = {20, 0, 6};
+//  float end_p[3]   = {8, 4, 6};
+//  line(start_p, end_p, true);
 
   //Part-3: square
   //  float square_start[4][3] = {{18, 3, 6}, {18, -3, 6}, {10, -3, 6}, {10, 3, 6}};
@@ -202,7 +203,7 @@ void setup()
   //  }
 
   //Part-3: arc
-  //arc(10, 45.0);  
+  arc(10, 30.0);  
 }
 
 void loop() {
