@@ -167,20 +167,20 @@ void setup()
   elbow.attach(6); 
 
   // Part-1: Forward kinematics
-  //  float angles[3] = {0, 0, 0};
-  //  base_angle = map(angles[0] + 90, 0, 180, 180, 0)
-  //  shoulder_angle = map(angles[1], 0, 180, 180, 0);
-  //  elbow_angle = map(angles[2] + 90, 0, 180, 180, 0);
+    float angles[3] = {-70, 0, 0};
+    base_angle = map(angles[0] + 90, 0, 180, 180, 0);
+    shoulder_angle = map(angles[1], 0, 180, 180, 0);
+    elbow_angle = map(angles[2] + 90, 0, 180, 180, 0);
 
-  //  calc_FK(angles);
-  //  Serial.println(endEffectorPos[0]);
-  //  Serial.println(endEffectorPos[1]);
-  //  Serial.println(endEffectorPos[2]);
+    calc_FK(angles);
+    Serial.println(endEffectorPos[0]);
+    Serial.println(endEffectorPos[1]);
+    Serial.println(endEffectorPos[2]);
 
   // Part-2: Inverse kinematics
   //    float xyz[3] = {10, 2, 8};
-  //    calc_IK(xyz);
-  //    write_angles();
+      calc_IK(endEffectorPos);
+      write_angles();
   //  base_angle = map(jointAngles[0] + 90, 0, 180, 180, 0);
   //  shoulder_angle = map(jointAngles[1], 0, 180, 180, 0);
   //  elbow_angle = map(jointAngles[3] + 90, 0, 180, 180, 0);
@@ -203,7 +203,7 @@ void setup()
   //  }
 
   //Part-3: arc
-  arc(10, 30.0);  
+  //arc(10, 30.0);  
 }
 
 void loop() {
