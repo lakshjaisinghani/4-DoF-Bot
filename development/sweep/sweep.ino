@@ -1,16 +1,24 @@
 #include "VarSpeedServo.h"
 
-// servo motors
+/// servo motors
 VarSpeedServo claw;
 VarSpeedServo shoulder;
 VarSpeedServo elbow;
 VarSpeedServo base;
+VarSpeedServo servos[4] = {claw, shoulder, elbow, base};
 
-// global variables
+///global variables
 float jointAngles[4];
 float base_angle, shoulder_angle, elbow_angle;
 float endEffectorPos[3];
 float lengths[4]     = {6, 8, 8, 6};
+
+/// sweep coords
+// left hand side only
+// TODO: RHS coords?
+float start_coord[3] = {4.06, -7.97, 5.98};
+float end_coord[3]   = {10, -20.03, 6};
+float begin_pose[3]  = {10, 0, 9};
 
 /// converts angle in degrees 
 /// to radians
@@ -50,20 +58,46 @@ void calc_IK(float coord[])
 /// servos
 void write_angles()
 {
-    // add servo offsets
-    base_angle = map(jointAngles[0] + 90, 0, 180, 180, 0);
-    shoulder_angle = map(jointAngles[1], 0, 180, 180, 0);
-    elbow_angle = map(jointAngles[3] + 90, 0, 180, 180, 0);
+    write_servo(jointAngles[1], 80, 1); // shoulder
+    write_servo(jointAngles[3], 80, 2); // elbow
+    write_servo(jointAngles[0], 80, 3); //base
+}
 
-    // write angles
-    shoulder.write(shoulder_angle);
-    base.write(base_angle); 
-    elbow.write(elbow_angle);
+/// Adds servo offsets and 
+/// writes angles
+// TODO: if servo == base;
+void write_servo(int angle, int s_speed, int servo_ind)
+{
+    float s_angle;
+
+    if (servo_ind == 1)
+    {
+        //shoulder
+        jointAngles[1] = angle;
+         s_angle = map(angle, 0, 180, 180, 0);
+    }
+    else if (servo_ind == 2)
+    {
+        // elbow
+        jointAngles[3] = angle;
+        s_angle = map(angle + 90, 0, 180, 180, 0);
+    }
+    else if (servo_ind == 3)
+    {
+        // base
+        jointAngles[0] = angle;
+        s_angle = map(angle + 90, 0, 180, 180, 0);
+    }
+
+    // update end effector pos
+    calc_FK(jointAngles);
+    
+    servos[servo_ind].write(s_angle, s_speed);
 }
 
 /// draws a line between start and end
 /// (x, y, z) coordinates
-float * line(float start_p[], float end_p[], bool flag, int lim)
+float * line(float start_p[], float end_p[], int lim)
 {
     float x = start_p[0];
     float y = start_p[1];
@@ -76,7 +110,8 @@ float * line(float start_p[], float end_p[], bool flag, int lim)
     int step_size = 1;
     int cnt = 0;
 
-    if (end_p[1] < start_p[1] or end_p[0] < start_p[0])
+    // removed end_p[1] < start_p[1]
+    if (end_p[0] < start_p[0])
     {
         step_size *= -1;
     }
@@ -90,61 +125,80 @@ float * line(float start_p[], float end_p[], bool flag, int lim)
             pnt[2] = z;
             
             calc_IK(pnt);
-
             write_angles();
-            delay(400);
 
             // moving in xy plane
             x = x + step_size;
             y = m*x + c;
         }
+        
         return pnt;
     }
 }
 
-// sweep
-void sweep()
+void print_coord(float coord[3], int id)
 {
-    float curr_angle = -70;
-    float angle;
-    float *f;
-    
-    float curr_coord[3] = {8, -10, 6};
-    float end_coord[3]  = {7,   0,  6};
-    float zero[3]       = {0, 0, 6} ;
-    int limit           = 2;
-
-    Serial.println("-----------");
-    Serial.println(curr_coord[0]);
-    Serial.println(curr_coord[1]);
-    Serial.println(curr_coord[2]);
-    Serial.println("-----------");
-
-    while(curr_coord != end_coord)
+  String coord_type;
+  
+    if (id == 1)
     {
-        curr_angle    = -70;
-        calc_IK(curr_coord);
-        write_angles();
+      coord_type = "Begin Coord ";
+    }
+    else if (id == 2)
+    {
+      coord_type = "End Coord ";
+    }
+    else
+    {
+      coord_type = "End Effector coord ";
+    }
     
-        while (curr_angle != 0)
+    Serial.print(coord_type);
+    Serial.print(coord[0]);
+    Serial.print(", ");
+    Serial.print(coord[1]);
+    Serial.print(", ");
+    Serial.print(coord[2]);
+    Serial.println(" ");
+}
+
+void sweep(float begin_coord[3])
+{
+    float end_x = 9.06;
+    int servo_ind = 3;
+    float read_angle;
+    float *f;
+
+    while (begin_coord[0] < end_x)
+    {
+        // go to begin coord
+        calc_IK(begin_coord);
+        write_angles();
+
+        delay(5000);
+
+        // slowly move base to zero
+        write_servo(0, 3, servo_ind);
+        read_angle = base.read();
+
+        while  (read_angle != 90)
         {
-            angle = map(curr_angle + 90, 0, 180, 180, 0);
-            base.write(angle); 
-            curr_angle += 2;
-            delay(500);
+            /*
+            // Do all checks in here
+            */
+
+            Serial.print("Current angle: ");
+            Serial.print(read_angle);
+            Serial.println(" ");
+
+            read_angle = base.read();
         }
 
-        f = line(curr_coord, zero, false, limit);
-        
-        curr_coord[0] = *f;
-        curr_coord[1] = *(f+1);
-        curr_coord[2] = *(f+2);
-
-        Serial.println("-----------");
-        Serial.println(curr_coord[0]);
-        Serial.println(curr_coord[1]);
-        Serial.println(curr_coord[2]);
-        Serial.println("-----------");
+        // go just below start_coord
+        f = line(start_coord, end_coord, 2);
+        begin_coord[0] = *f;
+        begin_coord[1] = *(f+1);
+        begin_coord[2] = *(f+2);   
     }
 }
 
@@ -159,7 +213,13 @@ void setup()
     base.attach(9); 
     elbow.attach(6); 
 
-    sweep();
+    // sweep
+    sweep(start_coord);
+
+    // go back to start
+    calc_IK(begin_pose);
+    write_angles();
+
 }
 
 void loop() 
