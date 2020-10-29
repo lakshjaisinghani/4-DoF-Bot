@@ -6,10 +6,7 @@ void setup() {
 
 void loop() 
 {
-  int val = analogRead(pin);
+  int val  = analogRead(pin);
 
-  if(val < 950)
-  {
-    Serial.println("object below");
-  }
+  Serial.println(val);
 }

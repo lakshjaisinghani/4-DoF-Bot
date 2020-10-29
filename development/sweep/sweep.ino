@@ -16,8 +16,9 @@ float lengths[4]     = {6, 8, 8, 6};
 /// sweep coords
 // left hand side only
 // TODO: RHS coords?
-float start_coord[3] = {4.06, -7.97, 5.98};
-float end_coord[3]   = {10, -20.03, 6};
+float start_coord[3] = {4.06, -7.97, 6};
+//End Coord 9.06, -18.12, 5.98
+float end_coord[3]   = {10, -19.6, 6};
 float begin_pose[3]  = {10, 0, 9};
 
 /// converts angle in degrees 
@@ -95,47 +96,6 @@ void write_servo(int angle, int s_speed, int servo_ind)
     servos[servo_ind].write(s_angle, s_speed);
 }
 
-/// draws a line between start and end
-/// (x, y, z) coordinates
-float * line(float start_p[], float end_p[], int lim)
-{
-    float x = start_p[0];
-    float y = start_p[1];
-    float z = start_p[2];
-    float m = (end_p[1] - y)/(end_p[0] - x);
-    float c = y - m*x;
-
-    static float pnt[3];
-
-    int step_size = 1;
-    int cnt = 0;
-
-    // removed end_p[1] < start_p[1]
-    if (end_p[0] < start_p[0])
-    {
-        step_size *= -1;
-    }
-    
-    if (lim)
-    {
-        for(int i = 0; i < lim; i++)
-        {
-            pnt[0] = x;
-            pnt[1] = y;
-            pnt[2] = z;
-            
-            calc_IK(pnt);
-            write_angles();
-
-            // moving in xy plane
-            x = x + step_size;
-            y = m*x + c;
-        }
-        
-        return pnt;
-    }
-}
-
 void print_coord(float coord[3], int id)
 {
   String coord_type;
@@ -162,29 +122,79 @@ void print_coord(float coord[3], int id)
     Serial.println(" ");
 }
 
+/// draws a line between start and end
+/// (x, y, z) coordinates
+float * line(float start_p[], float end_p[], float angle)
+{
+    float x = start_p[0];
+    float y = start_p[1];
+    int lim = 2;
+
+    // we use the equation y = mx
+    // and keep y-intercept as zero.
+    float m = tan(angle);
+
+    static float pnt[3];
+
+    int step_size = 1;
+    int cnt = 0;
+
+    // removed end_p[1] < start_p[1]
+    if (end_p[0] < start_p[0])
+    {
+        step_size *= -1;
+    }
+    
+    if (lim)
+    {
+        for(int i = 0; i < lim; i++)
+        {
+            pnt[0] = x;
+            pnt[1] = y;
+            pnt[2] = z;
+            
+            calc_IK(pnt);
+            write_angles();
+
+            // moving in xy plane
+            x = x + step_size;
+            y = m*x;
+        }
+        
+        return pnt;
+    }
+}
+
+
 void sweep(float begin_coord[3])
 {
     float end_x = 9.06;
     int servo_ind = 3;
     float read_angle;
     float *f;
+    float prev_base_angle;
 
     while (begin_coord[0] < end_x)
     {
+        print_coord(begin_coord, 2);
+      
         // go to begin coord
         calc_IK(begin_coord);
         write_angles();
+        
+        //base angle to return to
+        prev_base_angle = d2r(jointAngles[0]);
 
-        delay(5000);
+        delay(2000);
 
         // slowly move base to zero
-        write_servo(0, 3, servo_ind);
+        write_servo(63, 1, servo_ind);
         read_angle = base.read();
 
-        while  (read_angle != 90)
+        while  (read_angle != 27)
         {
             /*
-            // Do all checks in here
+            // Do all checks in here 
             */
 
             Serial.print("Current angle: ");
@@ -195,13 +205,12 @@ void sweep(float begin_coord[3])
         }
 
         // go just below start_coord
-        f = line(start_coord, end_coord, 2);
+        f = line(start_coord, end_coord, prev_base_angle);
         begin_coord[0] = *f;
         begin_coord[1] = *(f+1);
         begin_coord[2] = *(f+2);   
     }
 }
-
 
 void setup()
 {
@@ -216,9 +225,10 @@ void setup()
     // sweep
     sweep(start_coord);
 
-    // go back to start
-    calc_IK(begin_pose);
-    write_angles();
+//     float not_line_end_coord[3] = {9.06, -18.12, 9};
+//     calc_IK(not_line_end_coord);
+//     write_angles();
+//     Serial.println(jointAngles[0]);
 
 }
 
