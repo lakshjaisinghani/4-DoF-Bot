@@ -224,7 +224,7 @@ void setup()
     elbow.attach(6); 
 
     // sweep
-    sweep(start_coord);
+    //sweep(start_coord);
 
 //     float not_line_end_coord[3] = {9.06, -18.12, 9};
 //     calc_IK(not_line_end_coord);

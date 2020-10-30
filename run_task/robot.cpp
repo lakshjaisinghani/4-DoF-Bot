@@ -54,7 +54,15 @@ void robot::write_angles()
 {
     write_servo(jointAngles[1], 80, 1); // shoulder
     write_servo(jointAngles[3], 80, 2); // elbow
-    write_servo(jointAngles[0], 80, 3); //base
+    write_servo(jointAngles[0], 80, 0); //base
+}
+
+void robot::stop_bot()
+{
+    base.stop();
+    shoulder.stop();
+    elbow.stop();
+    claw.stop();
 }
 
 /// Adds servo offsets and 
@@ -76,13 +84,13 @@ void robot::write_servo(int angle, int s_speed, int servo_ind)
         jointAngles[3] = angle;
         s_angle = map(angle + 90, 0, 180, 180, 0);
     }
-    else if (servo_ind == 3)
+    else if (servo_ind == 0)
     {
         // base
         jointAngles[0] = angle;
         s_angle = map(angle + 90, 0, 180, 180, 0);
     }
-
+    
     // update end effector pos
     calc_FK(jointAngles);
     
@@ -175,47 +183,38 @@ void robot::update_box_pos()
     for (int i = 0; i < 3; i++)
     {
         box_pos[i] = endEffectorPos[i];
+        Serial.println(box_pos[i]);
     }
 }
 
-void robot::sweep_to_box(float begin_coord[3], float upto_angle, edge_detector edge)
+float robot::read_angle(int id)
 {
-    float end_x = 9.06;
-    float pose[3];
-    int servo_ind = 3;
-    float read_angle;
-    float check_angle;
-    int check = 0;
+    switch(id)
+    {
+        case 0: 
+            return (float) map(base.read(), 0, 180, 180, 0) - 90;
+            break;
 
+        case 1:
+            return (float) map(shoulder.read(), 0, 180, 180, 0);
+            break;
 
-    print_coord(begin_coord, 2);
-  
-    // go to begin coord
-    calc_IK(begin_coord);
-    write_angles();
+        case 2:
+            return (float) map(elbow.read(), 0, 180, 180, 0) - 90;
+            break;
+            
+        case 3: 
+            return (float) claw.read();
+            break;
+            
+        default:
+            break;
+    } 
+}
 
-    delay(2000);
-
-    // slowly move base to zero
-    write_servo(upto_angle, 1, servo_ind);
-   read_angle = map(base.read(), 0, 180, 180, 0) - 90;
-
-   while (read_angle != upto_angle)
-   {
-       // argumented function (check)
-       check = edge.is_below();
-
-       Serial.print("Current angle: ");
-       Serial.print(check);
-       Serial.println(" ");
-
-       read_angle = map(base.read(), 0, 180, 180, 0) - 90;
-
-       if (check)
-       {
-          return;
-       }
-   }  
+float robot::read_joint_angles()
+{
+    return jointAngles[0];
 }
 
 

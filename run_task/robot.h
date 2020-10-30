@@ -13,13 +13,15 @@ class robot
         VarSpeedServo shoulder;
         VarSpeedServo elbow;
         VarSpeedServo base;
-        VarSpeedServo servos[4] = {claw, shoulder, elbow, base};
+        VarSpeedServo servos[4] = {base, shoulder, elbow, claw};
 
         // bot stats variables
         float endEffectorPos[3];
         float jointAngles[4];
-        float box_pos[3];
         float lengths[4] = {6, 8, 8, 6};
+
+        // box position
+        float box_pos[3];
 
         // workspace 
         // 0 -> left is restricted  (cubes on right) : -90 -> 0
@@ -29,14 +31,16 @@ class robot
     public:
         robot();
         float d2r(float angle);
+        float read_angle(int id);
+        float read_joint_angles();
         void calc_FK(float angles[]);
         void calc_IK(float coord[]);
         void write_angles();
+        void stop_bot();
         void update_joint_angles();
         void update_box_pos();
         void write_servo(int angle, int s_speed, int servo_ind);
         void print_coord(float coord[3], int id);
-        void sweep_to_box(float begin_coord[3], float upto_angle, edge_detector edge);
         float * line(float start_p[], float end_p[], float angle);
 };
 
