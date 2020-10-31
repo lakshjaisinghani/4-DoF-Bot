@@ -33,6 +33,7 @@ class robot
         float d2r(float angle);
         float read_angle(int id);
         float read_joint_angles();
+        float * read_EE_pos();
         void calc_FK(float angles[]);
         void calc_IK(float coord[]);
         void write_angles();
@@ -43,7 +44,5 @@ class robot
         void print_coord(float coord[3], int id);
         float * line(float start_p[], float end_p[], float angle);
 };
-
-
 
 #endif

@@ -6,10 +6,10 @@
 robot::robot()
 {
     // set up servo motors 
-    shoulder.attach(11);
-    claw.attach(10); 
-    base.attach(9); 
-    elbow.attach(6); 
+    shoulder.attach(6);
+    claw.attach(9); 
+    base.attach(10); 
+    elbow.attach(11); 
 }
 
 /// converts angle in degrees 
@@ -82,7 +82,7 @@ void robot::write_servo(int angle, int s_speed, int servo_ind)
     {
         // elbow
         jointAngles[3] = angle;
-        s_angle = map(angle + 90, 0, 180, 180, 0);
+        s_angle = map(angle + 45, 0, 180, 180, 0);
     }
     else if (servo_ind == 0)
     {
@@ -172,7 +172,7 @@ void robot::update_joint_angles()
     float servo_angles[3];
     servo_angles[0] = map(base.read(), 0, 180, 180, 0) - 90;  // joint angles 0
     servo_angles[1] = map(shoulder.read(), 0, 180, 180, 0);   // joint angles 1
-    servo_angles[2] = map(elbow.read(), 0, 180, 180, 0) - 90; // joint angles 3
+    servo_angles[2] = map(elbow.read(), 0, 180, 180, 0) -45; // joint angles 3
 
     // as we need joint angles 2
     servo_angles[2] = -1 * (servo_angles[2] + servo_angles[1]);
@@ -218,4 +218,17 @@ float robot::read_angle(int id)
 float robot::read_joint_angles()
 {
     return jointAngles[0];
+}
+
+float * robot::read_EE_pos()
+{
+    update_joint_angles();
+
+    static float pos[3];
+
+    pos[0] = endEffectorPos[0];
+    pos[1] = endEffectorPos[1];
+    pos[2] = endEffectorPos[2];
+
+    return pos;
 }

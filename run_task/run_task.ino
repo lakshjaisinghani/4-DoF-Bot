@@ -1,38 +1,165 @@
 #include "robot.h"
 #include "sensors.h"
 
-// function declarations
+/// function declarations
 void sweep_to_box(float, robot, edge_detector);
 void sweep(float, robot, edge_detector);
 void find_box(robot, edge_detector);
+void center_on_block(float, robot, edge_detector, edge_detector);
+void pick_up();
 
-// global variables
-float center_pos[3] = {19, 0, 6};
-int restricted_area = 0; 
+/// global variables
+// bot
+float center_pos[3] = {18, 0, 5};
+float prev_pos[3];
+int restricted_area = 0;
+
+//cubes
+int num_cubes = 6;
+int picked_cubes = 5;
 
 void setup()
 {
-    Serial.begin(9600);
+  Serial.begin(9600);
 
-    //  Objects init 
-    robot Bot;
-    edge_detector edge_1(A0);
+  //  Objects init 
+  robot Bot;
+  edge_detector edge_storage_1(A0);
+  edge_detector edge_storage_2(A1);
+  edge_detector edge_robot_side(A2);
+  edge_detector edge_robot_top(A3);
 
-    // go to center
-    Bot.calc_IK(center_pos);
-    Bot.write_angles();
-    delay(2000);
+  // go to center
+  Bot.calc_IK(center_pos);
+  Bot.write_angles();
+  delay(2000);
 
-    // try to find box
-    //find_box(Bot, edge_1);
+  // try to find box
+  //find_box(Bot, edge_storage_1);
 
-    // sweep test
-    float coord[3] = {4.06, -7.97, 6};
-    sweep(coord, Bot, edge_1);
+
+  // sweep and pick cubes
+  float prev_pos[3] = {4.06, -7.97, 5.8};
+
+
+  // sweep 
+  sweep(prev_pos, Bot, edge_robot_side);
+  
+  // get prev EE pos
+  // we would be right above a cube
+  float *f = Bot.read_EE_pos();
+  prev_pos[0] = *f;
+  prev_pos[1] = *(f+1);
+  prev_pos[2] = *(f+2); 
+
+  Serial.println("found box");
+  //Serial.println(f);
+
+  
+  center_on_block(prev_pos, Bot, edge_robot_side, edge_robot_top);
+  //Bot.stop_bot();
+
+
+  // go to center
+  //Bot.calc_IK(center_pos);
+  //Bot.write_angles();
+  //delay(2000);
 }
 
 /// functions
 ///
+void center_on_block(float pos[3], robot Bot, edge_detector edge_side, edge_detector edge_top)
+{
+  int side = edge_side.is_below();
+  int top  = edge_top.is_below();
+  float m;
+  
+  // tuneable parameters
+  int max_iter = 1000; 
+  int iter = 0;
+  float step_size = 0.01;
+
+  //If neither IR sensor sees an edge, the scanning routine should be resumed. 
+  if (!side && !top) 
+  {
+    return;
+  }
+
+  while (side && (iter < max_iter))
+  {
+    pos[1] -= step_size;
+    Bot.calc_IK(pos);
+    Bot.write_angles();
+    side = edge_side.is_below();
+    iter++;
+
+  }
+
+  if (iter == max_iter)
+  {
+    Serial.println("Side Detection Timed Out");
+  }
+
+  iter = 0;
+  m = tan(Bot.d2r(Bot.read_joint_angles()));
+  
+  while(!top && (iter < max_iter))
+  {
+    pos[0] -= step_size; 
+    pos[1] = m * pos[0];
+    Bot.calc_IK(pos);
+    Bot.write_angles();
+    top = edge_top.is_below();
+    iter++;
+  }
+
+  if (iter == max_iter)
+  {
+    Serial.println("Side Detection Timed Out");
+    return;
+  }
+  else
+  {
+    Serial.println("Picking up");
+    // pick_up();
+  }
+
+  Serial.println("Out of func!");
+}
+
+void pick_up()
+{
+
+}
+
+void find_box(robot Bot, edge_detector edge)
+{
+    // go to max dist
+    // at -63.00 degrees
+    float start_coord[3] = {9.06, -17.97, 8.9};
+
+    // sweep full length
+    sweep_to_box(start_coord, Bot, edge);
+
+    //update jointAngles
+    Bot.update_joint_angles();
+
+    // stop if IR sensor gets triggered
+    Bot.stop_bot();
+
+    // TODO:
+    // show that box is found
+    // (bot state) some led action 
+    delay(1000);
+    
+    // update robot.box_pos
+    Bot.update_box_pos();
+
+    // go to center
+    Bot.calc_IK(center_pos);
+    Bot.write_angles();
+}
+
 void sweep_to_box(float begin_coord[3], robot Bot, edge_detector edge)
 {
     float end_x = 9.06;
@@ -85,34 +212,6 @@ void sweep_to_box(float begin_coord[3], robot Bot, edge_detector edge)
 }
 
 
-void find_box(robot Bot, edge_detector edge)
-{
-    // go to max dist
-    // at -63.00 degrees
-    float start_coord[3] = {9.06, -17.97, 8.9};
-
-    // sweep full length
-    sweep_to_box(start_coord, Bot, edge);
-
-    //update jointAngles
-    Bot.update_joint_angles();
-
-    // stop if IR sensor gets triggered
-    Bot.stop_bot();
-
-    // TODO:
-    // show that box is found
-    // (bot state) some led action 
-    delay(1000);
-    
-    // update robot.box_pos
-    Bot.update_box_pos();
-
-    // go to center
-    Bot.calc_IK(center_pos);
-    Bot.write_angles();
-}
-
 void sweep(float begin_coord[3], robot Bot, edge_detector edge)
 {
   float end_x;
@@ -122,6 +221,7 @@ void sweep(float begin_coord[3], robot Bot, edge_detector edge)
   float start_coord[3];
   float end_coord[3];
   float sweep_to;
+  int check = 0;
 
   // line variables
   if (!restricted_area)
@@ -172,14 +272,19 @@ void sweep(float begin_coord[3], robot Bot, edge_detector edge)
 
     while  (read_angle != sweep_to)
     {
-      /*
-      // Do all checks in here 
-      */
+
+      if (edge.is_below())
+      {
+        // return current pos
+        Bot.stop_bot();
+        return;
+      }
 
       Serial.print("Current angle: ");
       Serial.print(read_angle);
       Serial.println(" ");
-
+      Serial.println(edge.get_measure());
+      Serial.println(" ");
       read_angle = Bot.read_angle(0);
     }
 

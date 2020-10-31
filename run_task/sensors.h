@@ -7,7 +7,7 @@ class edge_detector
 {
     private:
         int _pin;
-        int threshold = 200;
+        int threshold = 900;
     
     public:
         edge_detector(int pin);
