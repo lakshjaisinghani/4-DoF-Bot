@@ -189,10 +189,10 @@ void sweep(float begin_coord[3])
         delay(2000);
 
         // slowly move base to zero
-        write_servo(63, 1, servo_ind);
+        write_servo(0, 3, servo_ind);
         read_angle = base.read();
 
-        while  (read_angle != 27)
+        while  (read_angle != 90)
         {
             /*
             // Do all checks in here 
@@ -224,7 +224,7 @@ void setup()
     elbow.attach(6); 
 
     // sweep
-    //sweep(start_coord);
+    sweep(start_coord);
 
 //     float not_line_end_coord[3] = {9.06, -18.12, 9};
 //     calc_IK(not_line_end_coord);

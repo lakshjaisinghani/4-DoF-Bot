@@ -170,9 +170,12 @@ float * robot::line(float start_p[], float end_p[], float angle)
 void robot::update_joint_angles()
 {
     float servo_angles[3];
-    servo_angles[0] = map(base.read(), 0, 180, 180, 0) - 90;
-    servo_angles[1] = map(shoulder.read(), 0, 180, 180, 0);
-    servo_angles[2] = map(elbow.read(), 0, 180, 180, 0) - 90;
+    servo_angles[0] = map(base.read(), 0, 180, 180, 0) - 90;  // joint angles 0
+    servo_angles[1] = map(shoulder.read(), 0, 180, 180, 0);   // joint angles 1
+    servo_angles[2] = map(elbow.read(), 0, 180, 180, 0) - 90; // joint angles 3
+
+    // as we need joint angles 2
+    servo_angles[2] = -1 * (servo_angles[2] + servo_angles[1]);
 
     calc_FK(servo_angles);
     calc_IK(endEffectorPos);
@@ -216,58 +219,3 @@ float robot::read_joint_angles()
 {
     return jointAngles[0];
 }
-
-
-// void robot::sweep(float begin_coord[3])
-// {
-//     float end_x = 9.06;
-//     int servo_ind = 3;
-//     float read_angle;
-//     float *f;
-//     float prev_base_angle;
-
-//     /// sweep coords
-//     // left hand side only
-//     // TODO: RHS coords?
-//     float start_coord[3] = {4.06, -7.97, 6};
-//     //End Coord 9.06, -18.12, 5.98
-//     float end_coord[3]   = {10, -19.6, 6};
-//     float begin_pose[3]  = {10, 0, 9};
-
-//     while (begin_coord[0] < end_x)
-//     {
-//         print_coord(begin_coord, 2);
-      
-//         // go to begin coord
-//         calc_IK(begin_coord);
-//         write_angles();
-        
-//         //base angle to return to
-//         prev_base_angle = d2r(jointAngles[0]);
-
-//         delay(2000);
-
-//         // slowly move base to zero
-//         write_servo(63, 1, servo_ind);
-//         read_angle = base.read();
-
-//         while  (read_angle != 27)
-//         {
-//             /*
-//             // Do all checks in here 
-//             */
-
-//             Serial.print("Current angle: ");
-//             Serial.print(read_angle);
-//             Serial.println(" ");
-
-//             read_angle = base.read();
-//         }
-
-//         // go just below start_coord
-//         f = line(start_coord, end_coord, prev_base_angle);
-//         begin_coord[0] = *f;
-//         begin_coord[1] = *(f+1);
-//         begin_coord[2] = *(f+2);   
-//     }
-// }

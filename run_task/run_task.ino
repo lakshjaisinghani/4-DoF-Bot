@@ -7,7 +7,7 @@ void sweep(float, robot, edge_detector);
 void find_box(robot, edge_detector);
 
 // global variables
-float center_pos[3] = {19, 0, 8};
+float center_pos[3] = {19, 0, 6};
 int restricted_area = 0; 
 
 void setup()
@@ -57,30 +57,30 @@ void sweep_to_box(float begin_coord[3], robot Bot, edge_detector edge)
 
     while (read_angle != upto_angle)
     {
-        // argumented function (check)
-        check = edge.is_below();
+      // argumented function (check)
+      check = edge.is_below();
 
-        Serial.print("Current angle: ");
-        Serial.print(check);
-        Serial.println(" ");
+      Serial.print("Current angle: ");
+      Serial.print(check);
+      Serial.println(" ");
 
-        read_angle = Bot.read_angle(0);
+      read_angle = Bot.read_angle(0);
 
-        if (check)
+      if (check)
+      {
+        // 0 -> left is restricted  (cubes on right) : -90 -> 0
+        // 1 -> right is restricted (cubes on left)  :  90 -> 0
+        if (read_angle >= 0)
         {
-                // 0 -> left is restricted  (cubes on right) : -90 -> 0
-                // 1 -> right is restricted (cubes on left)  :  90 -> 0
-                if (read_angle >= 0)
-                {
-                    restricted_area = 1;
-                }
-                else
-                {
-                    restricted_area = 0;
-                }
-
-                return;
+          restricted_area = 1;
         }
+        else
+        {
+          restricted_area = 0;
+        }
+
+        return;
+      }
     }  
 }
 
@@ -115,72 +115,83 @@ void find_box(robot Bot, edge_detector edge)
 
 void sweep(float begin_coord[3], robot Bot, edge_detector edge)
 {
-    float end_x = 9.06;
-    float read_angle;
-    float prev_base_angle;
-    float *f;
-    float start_coord[3];
-    float end_coord[3];
-    float sweep_to;
+  float end_x;
+  float read_angle;
+  float prev_base_angle;
+  float *f;
+  float start_coord[3];
+  float end_coord[3];
+  float sweep_to;
 
-    // line variables
-    if (!restricted_area)
-    {
-      start_coord[0] = 4.06;
-      start_coord[1] = -7.97;
-      start_coord[2] = 6;
-      
-      end_coord[0] = 10.0;
-      end_coord[1] = -19.6;
-      end_coord[2] = 6;
-      
-      sweep_to       = 0;
-    }
-    else
-    {
-    //   float start_coord[3] = {4.06, 0, 6};
-    //   float end_coord[3]   = {10.0, 0, 6};
-    //   float sweep_to       = 63;
-    }
+  // line variables
+  if (!restricted_area)
+  {
+    start_coord[0] = 4.06;
+    start_coord[1] = -7.97;
+    start_coord[2] = 6;
     
+    end_coord[0] = 10.0;
+    end_coord[1] = -19.6;
+    end_coord[2] = 6;
+    
+    sweep_to       = 0;
+    end_x = 9.06;
+  }
+  else
+  {
+    start_coord[0] = 9.05;
+    start_coord[1] = 0;
+    start_coord[2] = 6;
+    
+    end_coord[0] = 19.99;
+    end_coord[1] = 0;
+    end_coord[2] = 6;
+    
+    sweep_to       = 63;
+    end_x = 19.99;
+  }
 
-    while (begin_coord[0] <= end_x)
+
+  while (begin_coord[0] <= end_x)
+  {
+    Bot.print_coord(begin_coord, 2);
+
+    // go to begin coord
+    Bot.calc_IK(begin_coord);
+    Bot.write_angles();
+    
+    //base angle to return to
+    //jointAngles[0]
+    prev_base_angle = Bot.d2r(Bot.read_joint_angles());
+
+    delay(1000);
+
+    // slowly move base to zero
+    Bot.write_servo(sweep_to, 3, 0);
+    read_angle = Bot.read_angle(0);
+
+    while  (read_angle != sweep_to)
     {
-        Bot.print_coord(begin_coord, 2);
+      /*
+      // Do all checks in here 
+      */
 
-        // go to begin coord
-        Bot.calc_IK(begin_coord);
-        Bot.write_angles();
-        
-        //base angle to return to
-        //jointAngles[0]
-        prev_base_angle = Bot.d2r(Bot.read_joint_angles());
+      Serial.print("Current angle: ");
+      Serial.print(read_angle);
+      Serial.println(" ");
 
-        delay(2000);
-
-        // slowly move base to zero
-        Bot.write_servo(sweep_to, 3, 0);
-        read_angle = Bot.read_angle(0);
-
-        while  (read_angle != sweep_to)
-        {
-            /*
-            // Do all checks in here 
-            */
-
-            Serial.print("Current angle: ");
-            Serial.print(read_angle);
-            Serial.println(" ");
-
-            read_angle = Bot.read_angle(0);
-        }
-
-        // go just below start_coord
-        f = Bot.line(begin_coord, end_coord, prev_base_angle);
-        begin_coord[0] = *f;
-        begin_coord[1] = *(f+1);
-        begin_coord[2] = *(f+2);   
+      read_angle = Bot.read_angle(0);
     }
+
+    // update joint angles
+    Bot.update_joint_angles();
+    
+    // go just below start_coord
+    f = Bot.line(begin_coord, end_coord, prev_base_angle);
+    begin_coord[0] = *f;
+    begin_coord[1] = *(f+1);
+    begin_coord[2] = *(f+2);   
+  }
 }
 
 void loop()
