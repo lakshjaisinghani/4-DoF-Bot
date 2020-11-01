@@ -12,8 +12,9 @@ class edge_detector
     public:
         edge_detector(int pin);
         float get_measure();
-        int  is_below();
         void calibrate();
+        int  is_below();
+        int  side_edge_is_below();
 };
 
 class colour_sensor

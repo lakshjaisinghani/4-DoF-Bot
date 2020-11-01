@@ -18,24 +18,34 @@ float edge_detector::get_measure()
     return val/5.0;
 }
 
+void edge_detector::calibrate()
+{
+    float val = 0;
+
+    for (int i = 0; i < 10; i++)
+    {
+        val += get_measure();
+        delay(100);
+    }
+
+    threshold = (int) (val / 10.0);
+}
+
 int edge_detector::is_below()
+{
+    float val = get_measure();
+    float diff  = threshold - val;
+
+    //Serial.println(threshold);
+    
+    return (diff > 80) ? 1 : 0;
+}
+
+int edge_detector::side_edge_is_below()
 {
     float val = get_measure();
 
     return (val < threshold) ? 1 : 0;
-}
-
-void edge_detector::calibrate()
-{
-    float val = 0;
-    
-    delay(5000);
-    for (int i = 0; i < 5; i++)
-    {
-        val += get_measure();
-    }
-
-    threshold = (int) (val / 5.0) + 5;
 }
 
 colour_sensor::colour_sensor(int pin)
