@@ -2,7 +2,7 @@ int argbCalibrationVals[4][4]; // Each row contains measurements for a different
 int testCases[4][3] = {{0, 0, 0},{1, 0 ,0}, {0, 1, 0},{0, 0, 1}};
 const char colourIdStrings[4][15] = {"Ambient", "Red", "Green", "Blue"};
 
-const int analogPR = A1;
+const int analogPR = A4;
 const int outR = 2;
 const int outG = 3;
 const int outB = 4;

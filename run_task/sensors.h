@@ -7,33 +7,36 @@ class edge_detector
 {
     private:
         int _pin;
-        int threshold = 900;
+        int threshold = 0;
     
     public:
         edge_detector(int pin);
         float get_measure();
         int  is_below();
+        void calibrate();
 };
 
 class colour_sensor
 {
     private:
         int _R_pin = 2;
-        int _G_pin = 3;
-        int _B_pin = 4;
+        int _G_pin = 4;
+        int _B_pin = 3;
         int _pin;
 
         int argbCalibrationVals[4][4]; 
         int testCases[4][3] = {{0, 0, 0},{1, 0 ,0}, {0, 1, 0},{0, 0, 1}};
-        const char colourIdStrings[4][15] = {"Ambient", "Red", "Green", "Blue"};
+        int led_pins[3] = {_R_pin, _G_pin, _B_pin};
     
     public:
         colour_sensor(int pin);
         int arr_minDex(int arr[]);
-        void colourId();
+        int colourId();
         void getBaseline(int *colourVec);
         void printBaselines(int *colourVec);
         void calibrate();
+        void leds_togle(int on_off);
+        void led(int ind, int on_off);
 };
 
 

@@ -6,17 +6,22 @@ void sweep_to_box(float, robot, edge_detector);
 void sweep(float, robot, edge_detector);
 void find_box(robot, edge_detector);
 void center_on_block(float, robot, edge_detector, edge_detector);
-void pick_up();
+int find_colour(float, robot, colour_sensor);
+void pick_up(robot);
 
 /// global variables
 // bot
-float center_pos[3] = {18, 0, 5};
+float center_pos[3] = {9.05, 0, 8.9};
 float prev_pos[3];
 int restricted_area = 0;
+char input;
 
 //cubes
 int num_cubes = 6;
 int picked_cubes = 5;
+
+// colour
+const char colourIdStrings[4][1] = {'A', 'R', 'G', 'B'};
 
 void setup()
 {
@@ -28,37 +33,88 @@ void setup()
   edge_detector edge_storage_2(A1);
   edge_detector edge_robot_side(A2);
   edge_detector edge_robot_top(A3);
+  colour_sensor colour(A4);
+
+  float edge_calib_pos[3] = {4.06, -7.97, 6};
+  float col_calib_pos[3]  = {-1.0, -9.05, 4};
+
+  /// calibration state
+  Bot.write_servo(60, 0, 3);
+  Bot.calc_IK(edge_calib_pos);
+  Bot.write_angles();
+  delay(2000);
+
+  Serial.println("Would you like to calibrate edge? (y/n)");
+  while (!Serial.available())
+  {}
+  Serial.println("Place block under side sensor");
+  edge_robot_side.calibrate();
+  Serial.println("Place block under top sensor");
+  edge_robot_top.calibrate();
+  Serial.println("Done!");
+  delay(2000);
+
+  Bot.write_servo(180, 0, 3);
+  Bot.calc_IK(col_calib_pos);
+  Bot.write_angles();
+  delay(2000);
+
+  Serial.end();
+  Serial.begin(9600);
+
+  Serial.println("Would you like to calibrate colour sensor? (y/n)");
+  while (!Serial.available())
+  {}
+
+  // calibrate colour sensor
+  colour.calibrate();
+  // colour.leds_togle(1);
+  delay(2000);
+  Serial.println("Colour calibration done..");
+  colour.leds_togle(0);
+  delay(2000);
 
   // go to center
   Bot.calc_IK(center_pos);
   Bot.write_angles();
   delay(2000);
 
+  // set claw to closed
+  Bot.write_servo(60, 0, 3);
+  delay(2000);
+
+  Serial.end();
+  Serial.begin(9600);
+  
+  Serial.print("Would you like to start task? (y/n)");
+  while (!Serial.available())
+  {}
+
   // try to find box
   //find_box(Bot, edge_storage_1);
 
 
   // sweep and pick cubes
-  float prev_pos[3] = {4.06, -7.97, 5.8};
-
-
-  // sweep 
+  // get prev_pos from find box
+  float prev_pos[3] = {4.06, -7.97, 6};
   sweep(prev_pos, Bot, edge_robot_side);
   
   // get prev EE pos
-  // we would be right above a cube
   float *f = Bot.read_EE_pos();
   prev_pos[0] = *f;
   prev_pos[1] = *(f+1);
   prev_pos[2] = *(f+2); 
 
   Serial.println("found box");
-  //Serial.println(f);
-
   
   center_on_block(prev_pos, Bot, edge_robot_side, edge_robot_top);
-  //Bot.stop_bot();
+  Bot.stop_bot();
 
+  int col = find_colour(prev_pos, Bot, colour);
+
+  // pick up
+  pick_up(Bot);
+  
 
   // go to center
   //Bot.calc_IK(center_pos);
@@ -68,6 +124,43 @@ void setup()
 
 /// functions
 ///
+void pick_up(robot Bot)
+{
+  Bot.write_servo(60, 80, 3);
+  delay(2000);
+
+  // get current pos
+  float curr_pos[3];
+  float *f = Bot.read_EE_pos();
+  curr_pos[0] = *f;
+  curr_pos[1] = *(f+1);
+  curr_pos[2] = 8.5; 
+
+  // move to safe height
+  Bot.calc_IK(curr_pos);
+  Bot.write_angles();
+  delay(2000);
+}
+
+int find_colour(float pos[3], robot Bot, colour_sensor colour)
+{
+  int col_indx;
+
+  // open claw
+  Bot.write_servo(180, 0, 3);
+  delay(500);
+
+  // go down
+  pos[2] = 4;
+  Bot.calc_IK(pos);
+  Bot.write_angles();
+
+  // sense coulour
+  col_indx = colour.colourId();
+  Serial.println(colourIdStrings[col_indx][0]);
+  return col_indx;
+}
+
 void center_on_block(float pos[3], robot Bot, edge_detector edge_side, edge_detector edge_top)
 {
   int side = edge_side.is_below();
@@ -121,14 +214,8 @@ void center_on_block(float pos[3], robot Bot, edge_detector edge_side, edge_dete
   else
   {
     Serial.println("Picking up");
-    // pick_up();
+    return;
   }
-
-  Serial.println("Out of func!");
-}
-
-void pick_up()
-{
 
 }
 
@@ -210,7 +297,6 @@ void sweep_to_box(float begin_coord[3], robot Bot, edge_detector edge)
       }
     }  
 }
-
 
 void sweep(float begin_coord[3], robot Bot, edge_detector edge)
 {

@@ -25,8 +25,24 @@ int edge_detector::is_below()
     return (val < threshold) ? 1 : 0;
 }
 
+void edge_detector::calibrate()
+{
+    float val = 0;
+    
+    delay(5000);
+    for (int i = 0; i < 5; i++)
+    {
+        val += get_measure();
+    }
+
+    threshold = (int) (val / 5.0) + 5;
+}
+
 colour_sensor::colour_sensor(int pin)
 {
+    pinMode(_R_pin, OUTPUT);
+    pinMode(_G_pin, OUTPUT);
+    pinMode(_B_pin, OUTPUT);
     _pin = pin;
 }
 
@@ -47,11 +63,12 @@ int colour_sensor::arr_minDex(int arr[])
   return minDex;
 }
 
-void colour_sensor::colourId()
+int colour_sensor::colourId()
 {
     int abs_error_vec[4] = {0,0,0,0};
     int sample;
     int numTestCases = 4;
+    static char * col;
     
     for(int i = 1; i < numTestCases; i++)
     {
@@ -68,12 +85,13 @@ void colour_sensor::colourId()
 
         for (int c = 0; c < 4; c++)
         {
-        abs_error_vec[c] = abs(sample/15 - argbCalibrationVals[c][i]); //removed +=
+        abs_error_vec[c] = abs(sample/15 - argbCalibrationVals[c][i]); 
         }
     }
 
     int minDex = arr_minDex(abs_error_vec);
-    Serial.println(colourIdStrings[minDex]);
+    
+    return minDex;
 }
 
 void colour_sensor::getBaseline(int *colourVec)
@@ -125,12 +143,25 @@ void colour_sensor::calibrate()
     getBaseline(argbCalibrationVals[3]);
 
     // calibration output
-    Serial.println("No Block Responses to Null, R, G ,B:");
-    printBaselines(argbCalibrationVals[0]);
-    Serial.println("Red Block Responses to Null, R, G ,B:");
-    printBaselines(argbCalibrationVals[1]);
-    Serial.println("Green Block Responses to Null, R, G, B");
-    printBaselines(argbCalibrationVals[2]);
-    Serial.println("Blue Block Responses to Null, R, G, B");
-    printBaselines(argbCalibrationVals[3]);
+    // Serial.println("No Block Responses to Null, R, G ,B:");
+    // printBaselines(argbCalibrationVals[0]);
+    // Serial.println("Red Block Responses to Null, R, G ,B:");
+    // printBaselines(argbCalibrationVals[1]);
+    // Serial.println("Green Block Responses to Null, R, G, B");
+    // printBaselines(argbCalibrationVals[2]);
+    // Serial.println("Blue Block Responses to Null, R, G, B");
+    // printBaselines(argbCalibrationVals[3]);
+}
+
+void colour_sensor::led(int ind, int on_off)
+{
+    // {r, g, b}
+    digitalWrite(led_pins[ind], on_off);
+}
+
+void colour_sensor::leds_togle(int on_off)
+{
+    led(0, on_off);
+    led(1, on_off);
+    led(2, on_off);
 }
