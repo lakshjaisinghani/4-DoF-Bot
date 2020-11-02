@@ -203,8 +203,6 @@ void robot::update_box_pos(int id)
     }
   }
   
-  
-  
 }
 
 float robot::read_angle(int id)

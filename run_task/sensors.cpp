@@ -18,7 +18,7 @@ float edge_detector::get_measure()
     return val/5.0;
 }
 
-void edge_detector::calibrate()
+void edge_detector::calibrate(int type)
 {
     float val = 0;
 
@@ -28,34 +28,32 @@ void edge_detector::calibrate()
         delay(100);
     }
 
-    threshold = (int) (val / 5.0);
+    if (type)
+    {
+        upper_threshold = (int) (val / 5.0);
+    }
+    else
+    {
+        lower_threshold = (int) (val / 5.0);
+    }
+    
 }
 
 int edge_detector::is_below()
 {
     float val = get_measure();
-    float diff  = threshold - val;
+    float diff  = upper_threshold - val;
     
     return (diff > 80) ? 1 : 0;
 }
 
-int edge_detector::side_edge_is_below()
+int edge_detector::center_is_below()
 {
     float val = get_measure();
-
-    Serial.println(threshold);
-
-    return (val < (threshold-25)) ? 1 : 0;
+    
+    return (val < lower_threshold) ? 1 : 0;
 }
 
-int edge_detector::top_edge_is_below()
-{
-    float val = get_measure();
-
-    Serial.println(threshold);
-
-    return (val < (threshold-30)) ? 1 : 0;
-}
 
 limit_switch::limit_switch(int pin)
 {

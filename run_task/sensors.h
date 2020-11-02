@@ -7,15 +7,15 @@ class edge_detector
 {
     private:
         int _pin;
-        int threshold = 0;
+        int upper_threshold = 0;
+        int lower_threshold = 0;
     
     public:
         edge_detector(int pin);
         float get_measure();
-        void calibrate();
+        void calibrate(int type);
         int  is_below();
-        int  side_edge_is_below();
-        int  top_edge_is_below();
+        int  center_is_below();
 };
 
 class limit_switch
