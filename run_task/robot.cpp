@@ -181,13 +181,30 @@ void robot::update_joint_angles()
     calc_IK(endEffectorPos);
 }
 
-void robot::update_box_pos()
+void robot::update_box_pos(int id)
 {
+  // update jointAngles
+  update_joint_angles();
+
+  if (id)
+  {
     for (int i = 0; i < 3; i++)
     {
-        box_pos[i] = endEffectorPos[i];
-        Serial.println(box_pos[i]);
+        box_pos_1[i] = endEffectorPos[i];
+        Serial.println(box_pos_1[i]);
     }
+  }
+  else
+  {
+    for (int i = 0; i < 3; i++)
+    {
+        box_pos_2[i] = endEffectorPos[i];
+        Serial.println(box_pos_2[i]);
+    }
+  }
+  
+  
+  
 }
 
 float robot::read_angle(int id)

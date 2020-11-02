@@ -21,7 +21,8 @@ class robot
         float lengths[4] = {6, 8, 8, 6};
 
         // box position
-        float box_pos[3];
+        float box_pos_1[3];
+        float box_pos_2[3];
 
         // workspace 
         // 0 -> left is restricted  (cubes on right) : -90 -> 0
@@ -39,7 +40,7 @@ class robot
         void write_angles();
         void stop_bot();
         void update_joint_angles();
-        void update_box_pos();
+        void update_box_pos(int id);
         void write_servo(int angle, int s_speed, int servo_ind);
         void print_coord(float coord[3], int id);
         float * line(float start_p[], float end_p[], float angle);
