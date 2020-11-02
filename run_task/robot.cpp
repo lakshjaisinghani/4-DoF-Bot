@@ -52,9 +52,9 @@ void robot::calc_IK(float coord[])
 /// servos
 void robot::write_angles()
 {
-    write_servo(jointAngles[1], 50, 1); // shoulder
-    write_servo(jointAngles[3], 50, 2); // elbow
-    write_servo(jointAngles[0], 50, 0); //base
+    write_servo(jointAngles[1], 70, 1); // shoulder
+    write_servo(jointAngles[3], 70, 2); // elbow
+    write_servo(jointAngles[0], 70, 0); //base
 }
 
 void robot::stop_bot()
@@ -138,7 +138,7 @@ float * robot::line(float start_p[], float end_p[], float angle)
 
     static float pnt[3];
 
-    int step_size = 1;
+    float step_size = 0.5;
     int cnt = 0;
 
     // removed end_p[1] < start_p[1]

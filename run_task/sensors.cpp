@@ -22,21 +22,19 @@ void edge_detector::calibrate()
 {
     float val = 0;
 
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < 5; i++)
     {
         val += get_measure();
         delay(100);
     }
 
-    threshold = (int) (val / 10.0);
+    threshold = (int) (val / 5.0);
 }
 
 int edge_detector::is_below()
 {
     float val = get_measure();
     float diff  = threshold - val;
-
-    //Serial.println(threshold);
     
     return (diff > 80) ? 1 : 0;
 }
@@ -45,7 +43,30 @@ int edge_detector::side_edge_is_below()
 {
     float val = get_measure();
 
-    return (val < threshold) ? 1 : 0;
+    Serial.println(threshold);
+
+    return (val < (threshold-25)) ? 1 : 0;
+}
+
+int edge_detector::top_edge_is_below()
+{
+    float val = get_measure();
+
+    Serial.println(threshold);
+
+    return (val < (threshold-30)) ? 1 : 0;
+}
+
+limit_switch::limit_switch(int pin)
+{
+    _pin = pin;
+    pinMode(_pin, INPUT);
+}
+
+int limit_switch::button_state()
+{
+    int state = digitalRead(_pin);
+    return state;
 }
 
 colour_sensor::colour_sensor(int pin)

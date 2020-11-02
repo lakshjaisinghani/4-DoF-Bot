@@ -15,6 +15,17 @@ class edge_detector
         void calibrate();
         int  is_below();
         int  side_edge_is_below();
+        int  top_edge_is_below();
+};
+
+class limit_switch
+{
+    private:
+        int _pin;
+
+    public:
+        limit_switch(int pin);
+        int button_state();
 };
 
 class colour_sensor
