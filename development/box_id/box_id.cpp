@@ -5,8 +5,8 @@ float box_G[3] = {0,0,7};
 float box_b[3] = {0,0,7};
 float box_B[3] = {0,0,7};
 float *boxes[6] = {box_r,box_R,box_g,box_G,box_b,box_B};
-float box_IR1_coord = {0,0,0};
-float box_IR2_coord = {0,0,0};
+float box_IR1_coord[3] = {0,0,0};
+float box_IR2_coord[3] = {0,0,0};
 bool box_found = false;
 
 void box_id() // This function is called once both box_IR1_coord and box_IR2_coord have been located.
