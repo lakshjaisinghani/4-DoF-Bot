@@ -25,7 +25,6 @@ void edge_detector::calibrate(int type)
     for (int i = 1; i < 6; i++)
     {
         val += get_measure();
-        delay(100);
     }
 
     if (type)
@@ -48,21 +47,16 @@ int edge_detector::is_below()
     float val = get_measure();
     float diff  = upper_threshold - val;
     
-    return (abs(diff) > 200) ? 1 : 0;
+    return (abs(diff) > 100) ? 1 : 0;
 }
 
 int edge_detector::center_is_below(int id)
 {
     float val = get_measure();
 
-    if (id)
-    {
-        return (val < lower_threshold + 50) ? 1 : 0;
-    }
-    else
-    {
-        return (val < upper_threshold - 25) ? 1 : 0;
-    }    
+    float diff  = upper_threshold - val;
+    
+    return (abs(diff) > 100) ? 1 : 0; 
 }
 
 limit_switch::limit_switch(int pin)
