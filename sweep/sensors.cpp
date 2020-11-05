@@ -25,7 +25,7 @@ void edge_detector::calibrate(int type)
     for (int i = 1; i < 6; i++)
     {
         val += get_measure();
-        delay(100);
+        delay(50);
     }
 
     if (type)
@@ -48,7 +48,7 @@ int edge_detector::is_below()
     float val = get_measure();
     float diff  = upper_threshold - val;
     
-    return (abs(diff) > 200) ? 1 : 0;
+    return (abs(diff) > 80) ? 1 : 0;
 }
 
 int edge_detector::center_is_below(int id)
