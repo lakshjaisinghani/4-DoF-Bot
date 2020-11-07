@@ -52,9 +52,9 @@ void robot::calc_IK(float coord[])
 /// servos
 void robot::write_angles()
 {
-    write_servo(jointAngles[1], 70, 1); // shoulder
-    write_servo(jointAngles[3], 70, 2); // elbow
-    write_servo(jointAngles[0], 70, 0); //base
+    write_servo(jointAngles[1], 60, 1); // shoulder
+    write_servo(jointAngles[3], 60, 2); // elbow
+    write_servo(jointAngles[0], 60, 0); //base
 }
 
 void robot::stop_bot()

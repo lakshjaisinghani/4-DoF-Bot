@@ -46,8 +46,10 @@ int edge_detector::is_below()
 {
     float val = get_measure();
     float diff  = upper_threshold - val;
+
+    Serial.println(diff);
     
-    return (abs(diff) > 100) ? 1 : 0;
+    return (diff > 80) ? 1 : 0;
 }
 
 int edge_detector::center_is_below(int id)
