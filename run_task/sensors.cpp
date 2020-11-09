@@ -49,16 +49,20 @@ int edge_detector::is_below()
 
     Serial.println(diff);
     
-    return (diff > 80) ? 1 : 0;
+    return (diff > 120) ? 1 : 0;
 }
 
 int edge_detector::center_is_below(int id)
 {
     float val = get_measure();
+    delay(100);
+    float val_t = get_measure();
 
-    float diff  = upper_threshold - val;
-    
-    return (abs(diff) > 100) ? 1 : 0; 
+    float per = (val_t - val)/ 1023 * 100;
+
+    Serial.println(per);
+
+    return (per > 5) ? 1 : 0;
 }
 
 limit_switch::limit_switch(int pin)
@@ -178,14 +182,14 @@ void colour_sensor::calibrate()
     getBaseline(argbCalibrationVals[3]);
 
     // calibration output
-    // Serial.println("No Block Responses to Null, R, G ,B:");
-    // printBaselines(argbCalibrationVals[0]);
-    // Serial.println("Red Block Responses to Null, R, G ,B:");
-    // printBaselines(argbCalibrationVals[1]);
-    // Serial.println("Green Block Responses to Null, R, G, B");
-    // printBaselines(argbCalibrationVals[2]);
-    // Serial.println("Blue Block Responses to Null, R, G, B");
-    // printBaselines(argbCalibrationVals[3]);
+     Serial.println("No Block Responses to Null, R, G ,B:");
+     printBaselines(argbCalibrationVals[0]);
+     Serial.println("Red Block Responses to Null, R, G ,B:");
+     printBaselines(argbCalibrationVals[1]);
+     Serial.println("Green Block Responses to Null, R, G, B");
+     printBaselines(argbCalibrationVals[2]);
+     Serial.println("Blue Block Responses to Null, R, G, B");
+     printBaselines(argbCalibrationVals[3]);
 }
 
 void colour_sensor::led(int ind, int on_off)

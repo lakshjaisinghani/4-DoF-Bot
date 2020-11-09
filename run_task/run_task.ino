@@ -3,24 +3,27 @@
 
 float * sweep(float, robot Bot, edge_detector &edge1, edge_detector &edge2);
 void center_on_block(float pos[3], robot Bot, edge_detector &edge_side, edge_detector &edge_top);
-int find_colour(float, robot, colour_sensor);
+int find_colour(float pos[3], robot &Bot, colour_sensor &colour, int cube_colour);
 int pick_up(robot, limit_switch);
 float * grab_cube(float pos[3], robot Bot,  limit_switch lim);
 
 /// global variables
 // bot
 float center_pos[3] = {12, 0, 8};
+float col_calib_pos[3]  = {-1.0, -9.05, 4};
 float prev_pos[3];
 float in_center_pos[3];
 int restricted_area = 0;
 char input;
 
 //cubes
-int num_cubes = 10;
+int num_cubes    = 6;
 int picked_cubes = 0;
 
-// colour
+// colour and size
 const char colourIdStrings[4][1] = {'A', 'R', 'G', 'B'};
+int cube_colour = 0;
+int size        = 0; 
 
 void setup()
 {
@@ -30,13 +33,33 @@ void setup()
   robot Bot;
   edge_detector edge_storage_1(A0);
   edge_detector edge_storage_2(A1);
-  edge_detector edge_robot_side(A2);
+  edge_detector edge_robot_side(A5);
   edge_detector edge_robot_top(A3);
   colour_sensor colour(A4);
   limit_switch  limit(7);
 
   float * pnt;
-  
+
+  // calibrate colour
+  Bot.write_servo(120, 0, 3);
+  Bot.calc_IK(col_calib_pos);
+  Bot.write_angles();
+  delay(2000);
+
+  Serial.println("Would you like to calibrate colour sensor? (y/n)");
+  while (!Serial.available())
+  {}
+
+  // calibrate colour sensor
+  colour.calibrate();
+  delay(2000);
+  Serial.println("Colour calibration done..");
+  colour.leds_togle(0);
+  delay(2000);
+
+  Serial.end();
+  Serial.begin(9600);
+
   // go to center
   Bot.calc_IK(center_pos);
   Bot.write_angles();
@@ -51,6 +74,8 @@ void setup()
   
   while (picked_cubes < num_cubes)
   {
+    cube_colour = 0;
+
     pnt = sweep(prev_pos, Bot, edge_robot_side, edge_robot_top);
 
     Serial.println("Found cube");
@@ -88,9 +113,13 @@ void setup()
     Serial.println(in_center_pos[1]);
     Serial.println(in_center_pos[2]);
 
-    // find colour
-    int cube_colour = find_colour(in_center_pos, Bot, colour);
-    delay(3000);
+    // find colour until sure
+    while (!cube_colour)
+    {
+      cube_colour = find_colour(in_center_pos, Bot, colour, cube_colour);
+      Serial.println(cube_colour);
+      delay(1000);
+    }
     
     Bot.calc_IK(center_pos);
     Bot.write_angles();
@@ -111,13 +140,14 @@ float * grab_cube(float pos[3], robot Bot,  limit_switch lim)
   int angle;
   float m;
   static float return_coord[3];
+  int count = 0;
 
   // open claw
   Bot.write_servo(120, 0, 3);
   delay(2000);
 
   // go down 
-  pos[2] = 4;
+  pos[2] = 3.8;
   Bot.calc_IK(pos);
   Bot.write_angles();
   delay(1000);
@@ -140,6 +170,15 @@ float * grab_cube(float pos[3], robot Bot,  limit_switch lim)
       Bot.calc_IK(pos);
       Bot.write_angles();
       delay(1000);
+    }
+
+    if (count > 3)
+    {
+      break;
+    }
+    else
+    {
+      count ++;
     }
   }
 
@@ -172,8 +211,15 @@ int pick_up(robot Bot, limit_switch lim)
   return read_angle;
 }
 
-int find_colour(float pos[3], robot Bot, colour_sensor colour)
+int find_colour(float pos[3], robot &Bot, colour_sensor &colour, int cube_colour)
 {
+  // retry
+  if (cube_colour >= 1)
+  {
+    Bot.write_servo(80, 0, 3);
+    delay(1000);
+  }
+
   // reinstantiate pos
   Bot.calc_IK(pos);
   Bot.write_angles();
@@ -188,7 +234,6 @@ int find_colour(float pos[3], robot Bot, colour_sensor colour)
 
   // go back
   float m = tan(Bot.d2r(Bot.read_joint_angles()));
-  Serial.println(m);
   pos[0] -= 1;
   pos[1] = m * pos[0];
   Bot.calc_IK(pos);
@@ -407,16 +452,3 @@ float * sweep(float start_coord[3], robot Bot, edge_detector &edge1, edge_detect
 
 void loop()
 {}
-
-// get current pos
-// float curr_pos[3];
-// float *f = Bot.read_EE_pos();
-// curr_pos[0] = *f;
-// curr_pos[1] = *(f+1);
-// curr_pos[2] = 8.5;
-// delay(1000);
-
-// move to safe height
-// Bot.calc_IK(curr_pos);
-// Bot.write_angles();
-// delay(2000);
