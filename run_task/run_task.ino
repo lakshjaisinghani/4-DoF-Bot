@@ -6,6 +6,8 @@ void center_on_block(float pos[3], robot Bot, edge_detector &edge_side, edge_det
 int find_colour(float pos[3], robot &Bot, colour_sensor &colour, int cube_colour);
 int pick_up(robot, limit_switch);
 float * grab_cube(float pos[3], robot Bot,  limit_switch lim);
+void find_box(robot &Bot, edge_detector edge1, edge_detector edge2);
+void sweep_to_box(float begin_coord[3], robot Bot, edge_detector edge);
 
 /// global variables
 // bot
@@ -22,8 +24,8 @@ int picked_cubes = 0;
 
 // colour and size
 const char colourIdStrings[4][1] = {'A', 'R', 'G', 'B'};
-int cube_colour = 0;
-int size        = 0; 
+int cube_colour = 0; // ambient
+int cube_size   = 2; // no cube
 
 void setup()
 {
@@ -117,10 +119,14 @@ void setup()
     while (!cube_colour)
     {
       cube_colour = find_colour(in_center_pos, Bot, colour, cube_colour);
+      Serial.print("Colour: ");
       Serial.println(cube_colour);
       delay(1000);
     }
     
+    Serial.println("Cube size: ");
+    Serial.print(cube_size);
+   
     Bot.calc_IK(center_pos);
     Bot.write_angles();
     delay(2000);
@@ -181,6 +187,10 @@ float * grab_cube(float pos[3], robot Bot,  limit_switch lim)
       count ++;
     }
   }
+  
+  // determine size
+  cube_size = (angle < 20) ? 0 : 1;
+  if (angle < 2) cube_size = 2;
 
   float * f = Bot.read_EE_pos();
   return_coord[0] = *f;
@@ -259,7 +269,7 @@ void center_on_block(float pos[3], robot Bot, edge_detector &edge_side, edge_det
   float m;
   
   // tuneable parameters
-  int max_iter = 1000; 
+  int max_iter = 100; 
   int iter = 0;
   float step_size = 0.01;
 
@@ -268,24 +278,27 @@ void center_on_block(float pos[3], robot Bot, edge_detector &edge_side, edge_det
   {
     return;
   }
+
   delay(1000);
   while (side && (iter < max_iter))
   {
     if (!restricted_area)
     {
-     pos[1] -= step_size * 10;
-     Bot.calc_IK(pos);
-     Bot.write_angles();
-    side = edge_side.is_below();
-    iter++;
+      // left side
+      pos[1] -= step_size * 10;
+      Bot.calc_IK(pos);
+      Bot.write_angles();
+      side = edge_side.is_below();
+      iter++;
     }
     else
     {
+      // right side
       pos[1] -= step_size;
-     Bot.calc_IK(pos);
-     Bot.write_angles();
-    side = edge_side.is_below();
-    iter++;
+      Bot.calc_IK(pos);
+      Bot.write_angles();
+      side = edge_side.is_below();
+      iter++;
     }
     
     Serial.println(" SIDE ");
@@ -301,7 +314,7 @@ void center_on_block(float pos[3], robot Bot, edge_detector &edge_side, edge_det
   iter = 0;
   m = tan(Bot.d2r(Bot.read_joint_angles()));
 
-  // recalibrate top as we are lower
+  // recalibrate top IR as we are lower
   delay(1000);
   edge_top.calibrate(1);
   
@@ -320,7 +333,8 @@ void center_on_block(float pos[3], robot Bot, edge_detector &edge_side, edge_det
    Serial.println(" ");
  }
 
-  // go ahead a little
+  // go ahead a little for
+  // better position tuning
   delay(500);
   pos[0] += 0.8; 
   pos[1] = m * pos[0];
@@ -448,6 +462,131 @@ float * sweep(float start_coord[3], robot Bot, edge_detector &edge1, edge_detect
     begin_coord[2] = *(f+2);
 
   }
+}
+
+void find_box(robot &Bot, edge_detector edge1, edge_detector edge2)
+{
+  // go to max dist
+  // at -63.00 degrees
+  float start_coord_top_1[3] = {9.06, -17.97, 7.65}; // left half top
+  float start_coord_top_2[3] = {19.99, 0, 7.1};      // right half top
+  float start_coord_bot[3] = {3.15, -6.18, 6.25};    // bottom
+
+
+  // sweep half length
+  sweep_to_box(start_coord_top_1, Bot, edge1);
+  Bot.stop_bot();
+  delay(1000);
+  
+  if (restricted_area > 1)
+  {
+    // sweep other half length because box not found
+    sweep_to_box(start_coord_top_2, Bot, edge1);
+    Bot.stop_bot();
+  }
+
+  Serial.println(restricted_area);
+
+  // update robot.box_pos
+  Bot.update_box_pos(0);
+
+  // TODO:
+  // show that box is found
+  // (bot state) some led action 
+  delay(1000);
+
+  // go to center
+  Bot.calc_IK(center_pos);
+  Bot.write_angles();
+  delay(1000);
+
+  // sweep full length
+  sweep_to_box(start_coord_bot, Bot, edge2);
+  Bot.stop_bot();
+
+  // update robot.box_pos
+  Bot.update_box_pos(1);
+
+  // TODO:
+  // show that box is found
+  // (bot state) some led action 
+  delay(1000);
+
+  // go to center
+  Bot.calc_IK(center_pos);
+  Bot.write_angles();
+  delay(1000);
+
+}
+
+void sweep_to_box(float begin_coord[3], robot Bot, edge_detector edge)
+{
+  float end_x = 9.06;
+  float pose[3];
+  float read_angle;
+  float check_angle;
+  int check = 0;
+  float upto_angle;
+
+  if (begin_coord[0] > 5)
+  {
+    if (7.0 < begin_coord[2] && begin_coord[2]<= 7.5) 
+    {
+      upto_angle = 63;
+    }
+    else 
+    {
+      upto_angle = 0;
+    }
+  }
+  else
+  {
+    upto_angle = 63;
+  }
+  
+  Serial.println("upto");
+  Serial.println(upto_angle);
+ 
+  // set claw to closed position
+  Bot.write_servo(0, 0, 3);
+  delay(1000);
+
+  // go to begin coord
+  Bot.calc_IK(begin_coord);
+  Bot.write_angles();
+  delay(1000);
+
+  // slowly move base to zero
+  Bot.write_servo(upto_angle, 3, 0);
+  read_angle = Bot.read_angle(0);
+
+  while (read_angle != upto_angle)
+  {
+    // argumented function (check)
+    check = edge.get_measure();
+
+    if (check < 100)
+    {
+      Bot.stop_bot();
+      Bot.write_servo(read_angle - 5, 0, 0);
+      delay(1000);
+      
+      // 0 -> left is restricted  (cubes on right)
+      // 1 -> right is restricted (cubes on left) 
+      if (read_angle >= 0)
+      {
+        restricted_area = 0;
+      }
+      else
+      {
+        restricted_area = 1;
+      }
+
+      return;
+    }
+
+    read_angle = Bot.read_angle(0);
+  }  
 }
 
 void loop()

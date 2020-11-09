@@ -13,9 +13,7 @@ void box_id() // This function is called once both box_IR1_coord and box_IR2_coo
 {
   float *A = box_IR1_coord;
   float *B = box_IR2_coord;
-  //float diag = 22.14;
-  //float distance_from_point[6] = {0.5534, 3.8738, -1.6602, 1.6602, -3.8738, -0.5534};
-  //float distance_along_R[6] = {3.8738, 4.9806, 10.5146, 11.6214, 17.1554, 18.2622};
+
   float distance_from_point[6] = {0.4711,3.3384,-1.8228,1.0455,-4.1166,-1.2493};
   float distance_along_R[6] = {2.7711,4.7782,6.0480,8.0551,9.3249,11.3320};
   float diag = 12.207;
