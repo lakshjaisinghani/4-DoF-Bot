@@ -19,15 +19,6 @@ class robot
         float endEffectorPos[3];
         float jointAngles[4];
         float lengths[4] = {6, 8, 8, 6};
-
-        // box position
-        float box_pos_1[3];
-        float box_pos_2[3];
-
-        // workspace 
-        // 0 -> left is restricted  (cubes on right) : -90 -> 0
-        // 1 -> right is restricted (cubes on left)  :  90 -> 0
-        int restricted_area;
         
     public:
         robot();
