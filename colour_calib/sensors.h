@@ -15,6 +15,7 @@ class edge_detector
         float get_measure();
         void calibrate(int type);
         int  is_below();
+        int  center_is_below(int id);
 };
 
 class limit_switch
@@ -35,7 +36,7 @@ class colour_sensor
         int _B_pin = 3;
         int _pin;
 
-        int argbCalibrationVals[4][4] = {{864, 943, 950, 916},{799, 966, 937, 885},{807, 944, 966, 944},{752, 915, 935, 905}}; 
+        int argbCalibrationVals[4][4]; 
         int testCases[4][3] = {{0, 0, 0},{1, 0 ,0}, {0, 1, 0},{0, 0, 1}};
         int led_pins[3] = {_R_pin, _G_pin, _B_pin};
     

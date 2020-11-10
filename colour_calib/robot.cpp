@@ -1,35 +1,27 @@
+#include "Arduino.h"
+#include "robot.h"
 #include "VarSpeedServo.h"
+#include "sensors.h"
 
-/// servo motors
-VarSpeedServo claw;
-VarSpeedServo shoulder;
-VarSpeedServo elbow;
-VarSpeedServo base;
-VarSpeedServo servos[4] = {claw, shoulder, elbow, base};
-
-///global variables
-float jointAngles[4];
-float base_angle, shoulder_angle, elbow_angle;
-float endEffectorPos[3];
-float lengths[4]     = {6, 8, 8, 6};
-
-/// sweep coords
-// left hand side only
-// TODO: RHS coords?
-float start_coord[3] = {4.06, -7.97, 6};
-//End Coord 9.06, -18.12, 5.98
-float end_coord[3]   = {10, -19.6, 6};
-float begin_pose[3]  = {10, 0, 9};
+robot::robot()
+{
+    // set up servo motors 
+    shoulder.attach(6);
+    claw.attach(9); 
+    base.attach(10); 
+    elbow.attach(11); 
+}
 
 /// converts angle in degrees 
 /// to radians
-float d2r(float angle){
+float robot::d2r(float angle)
+{
     return DEG_TO_RAD * angle;
 }
 
 /// calculates forward 
 /// kinematics
-void calc_FK(float Angles[])
+void robot::calc_FK(float Angles[])
 {
     float gamma = lengths[1]*cos(d2r(Angles[1])) + lengths[2]*cos(d2r(Angles[1]+Angles[2]))+lengths[3];
     endEffectorPos[0] = gamma*cos(d2r(Angles[0]));     
@@ -37,9 +29,10 @@ void calc_FK(float Angles[])
     endEffectorPos[2] = lengths[0] + lengths[1]*sin(d2r(Angles[1])) + lengths[2]*sin(d2r(Angles[1]+Angles[2]));
 }
 
+
 /// calculates inverse 
 /// kinematics
-void calc_IK(float coord[])
+void robot::calc_IK(float coord[])
 { 
     float l1 = lengths[0], l2 = lengths[1], l3 = lengths[2], l4 = lengths[3];
     float xx = pow(pow(coord[0],2)+pow(coord[1],2),0.5) - l4;
@@ -57,19 +50,27 @@ void calc_IK(float coord[])
 
 /// writes current jointAngles[] to
 /// servos
-void write_angles()
+void robot::write_angles()
 {
-    write_servo(jointAngles[1], 80, 1); // shoulder
-    write_servo(jointAngles[3], 80, 2); // elbow
-    write_servo(jointAngles[0], 80, 3); //base
+    write_servo(jointAngles[1], 50, 1); // shoulder
+    write_servo(jointAngles[3], 50, 2); // elbow
+    write_servo(jointAngles[0], 50, 0); //base
+}
+
+void robot::stop_bot()
+{
+    base.stop();
+    shoulder.stop();
+    elbow.stop();
+    claw.stop();
 }
 
 /// Adds servo offsets and 
 /// writes angles
 // TODO: if servo == base;
-void write_servo(int angle, int s_speed, int servo_ind)
+void robot::write_servo(int angle, int s_speed, int servo_ind)
 {
-    float s_angle;
+    float s_angle = angle;
 
     if (servo_ind == 1)
     {
@@ -81,22 +82,22 @@ void write_servo(int angle, int s_speed, int servo_ind)
     {
         // elbow
         jointAngles[3] = angle;
-        s_angle = map(angle + 90, 0, 180, 180, 0);
+        s_angle = map(angle + 45, 0, 180, 180, 0);
     }
-    else if (servo_ind == 3)
+    else if (servo_ind == 0)
     {
         // base
         jointAngles[0] = angle;
         s_angle = map(angle + 90, 0, 180, 180, 0);
     }
-
+    
     // update end effector pos
     calc_FK(jointAngles);
     
     servos[servo_ind].write(s_angle, s_speed);
 }
 
-void print_coord(float coord[3], int id)
+void robot::print_coord(float coord[3], int id)
 {
   String coord_type;
   
@@ -124,7 +125,7 @@ void print_coord(float coord[3], int id)
 
 /// draws a line between start and end
 /// (x, y, z) coordinates
-float * line(float start_p[], float end_p[], float angle)
+float * robot::line(float start_p[], float end_p[], float angle)
 {
     float x = start_p[0];
     float y = start_p[1];
@@ -137,7 +138,7 @@ float * line(float start_p[], float end_p[], float angle)
 
     static float pnt[3];
 
-    int step_size = 1;
+    float step_size = 0.5;
     int cnt = 0;
 
     // removed end_p[1] < start_p[1]
@@ -166,74 +167,59 @@ float * line(float start_p[], float end_p[], float angle)
     }
 }
 
-
-void sweep(float begin_coord[3])
+void robot::update_joint_angles()
 {
-    float end_x = 9.06;
-    int servo_ind = 3;
-    float read_angle;
-    float *f;
-    float prev_base_angle;
+    float servo_angles[3];
+    servo_angles[0] = map(base.read(), 0, 180, 180, 0) - 90;  // joint angles 0
+    servo_angles[1] = map(shoulder.read(), 0, 180, 180, 0);   // joint angles 1
+    servo_angles[2] = map(elbow.read(), 0, 180, 180, 0) -45; // joint angles 3
 
-    while (begin_coord[0] < end_x)
+    // as we need joint angles 2
+    servo_angles[2] = -1 * (servo_angles[2] + servo_angles[1]);
+
+    calc_FK(servo_angles);
+    calc_IK(endEffectorPos);
+}
+
+float robot::read_angle(int id)
+{
+    switch(id)
     {
-        print_coord(begin_coord, 2);
-      
-        // go to begin coord
-        calc_IK(begin_coord);
-        write_angles();
-        
-        //base angle to return to
-        prev_base_angle = d2r(jointAngles[0]);
+        case 0: 
+            return (float) map(base.read(), 0, 180, 180, 0) - 90;
+            break;
 
-        delay(2000);
+        case 1:
+            return (float) map(shoulder.read(), 0, 180, 180, 0);
+            break;
 
-        // slowly move base to zero
-        write_servo(0, 3, servo_ind);
-        read_angle = base.read();
-
-        while  (read_angle != 90)
-        {
-            /*
-            // Do all checks in here 
-            */
-
-            Serial.print("Current angle: ");
-            Serial.print(read_angle);
-            Serial.println(" ");
-
-            read_angle = base.read();
-        }
-
-        // go just below start_coord
-        f = line(start_coord, end_coord, prev_base_angle);
-        begin_coord[0] = *f;
-        begin_coord[1] = *(f+1);
-        begin_coord[2] = *(f+2);   
-    }
+        case 2:
+            return (float) map(elbow.read(), 0, 180, 180, 0) - 90;
+            break;
+            
+        case 3: 
+            return (float) claw.read();
+            break;
+            
+        default:
+            break;
+    } 
 }
 
-void setup()
+float robot::read_joint_angles()
 {
-    Serial.begin(9600);
-
-    // set up motors 
-    shoulder.attach(11);
-    claw.attach(10); 
-    base.attach(9); 
-    elbow.attach(6); 
-
-    // sweep
-    sweep(start_coord);
-
-//     float not_line_end_coord[3] = {9.06, -18.12, 9};
-//     calc_IK(not_line_end_coord);
-//     write_angles();
-//     Serial.println(jointAngles[0]);
-
+    return jointAngles[0];
 }
 
-void loop() 
+float * robot::read_EE_pos()
 {
+    update_joint_angles();
 
+    static float pos[3];
+
+    pos[0] = endEffectorPos[0];
+    pos[1] = endEffectorPos[1];
+    pos[2] = endEffectorPos[2];
+
+    return pos;
 }
