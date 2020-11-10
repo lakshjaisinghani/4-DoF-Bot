@@ -67,16 +67,16 @@ void setup()
   Bot.write_angles();
   Bot.write_servo(0, 0, 3);
 
-  // Serial.print("Would you like to find box task? (y/n)");
-  // while (!Serial.available())
-  // {}
+  Serial.print("Would you like to find box task? (y/n)");
+  while (!Serial.available())
+  {}
 
-  // // find box until position is sure (sets restricted area)
-  // find_box(Bot, edge_storage_1, edge_storage_2);
+  // find box until position is sure (sets restricted area)
+  find_box(Bot, edge_storage_1, edge_storage_2);
 
-  // Serial.end();
-  // Serial.begin(9600);
-  // delay(2000);
+  Serial.end();
+  Serial.begin(9600);
+  delay(2000);
 
   // go to center
   Bot.calc_IK(center_pos);
