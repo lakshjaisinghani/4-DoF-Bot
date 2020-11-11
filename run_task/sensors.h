@@ -35,7 +35,7 @@ class colour_sensor
         int _B_pin = 3;
         int _pin;
 
-        int argbCalibrationVals[4][4] = {{864, 943, 950, 916},{799, 966, 937, 885},{807, 944, 966, 944},{752, 915, 935, 905}}; 
+        int argbCalibrationVals[4][4] = {{769, 936, 946, 896},{622, 970, 933, 838},{591, 943, 968, 943},{530, 902, 931, 888}}; 
         int testCases[4][3] = {{0, 0, 0},{1, 0 ,0}, {0, 1, 0},{0, 0, 1}};
         int led_pins[3] = {_R_pin, _G_pin, _B_pin};
     

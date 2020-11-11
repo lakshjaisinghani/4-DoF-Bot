@@ -49,7 +49,7 @@ int edge_detector::is_below()
 
     Serial.println(diff);
     
-    return (diff > 120) ? 1 : 0;
+    return (diff > 100) ? 1 : 0;
 }
 
 limit_switch::limit_switch(int pin)
