@@ -1,10 +1,25 @@
+/**************************************************************************/
+/*
+@file     run_task.ino
+@authors   Laksh Jaisinghani and Harris Bayly 
+
+First version of the Arduino based 4-DoF-robot arm.
+
+NOTE: If Arduino memory leaks occur add a new directory and file with color
+      calibration and copy the calibrated values into sensors.h
+
+@section  HISTORY
+v1.0
+*/
+/**************************************************************************/
+
 #include "robot.h"
 #include "sensors.h"
 
 float * sweep(float, robot Bot, edge_detector &edge1, edge_detector &edge2);
 void center_on_block(float pos[3], robot Bot, edge_detector &edge_side, edge_detector &edge_top);
-int find_colour(float pos[3], robot &Bot, colour_sensor &colour, int cube_colour);
-int pick_up(robot, limit_switch);
+int find_colour(float pos[3], robot &Bot, colour_sensor &bot_colour_sensor, int cube_colour);
+int pick_up(robot Bot, limit_switch lim);
 float * grab_cube(float pos[3], robot Bot,  limit_switch lim);
 void find_box(robot &Bot, edge_detector edge1, edge_detector edge2);
 void sweep_to_box(float begin_coord[3], robot Bot, edge_detector edge, int top_bot);
@@ -12,11 +27,12 @@ int place_cube(int cube_colour, int cube_size);
 
 /// global variables
 // bot
-float center_pos[3] = {12, 0, 8};
+float center_pos[3] = {10, 0, 10};
 float col_calib_pos[3]  = {-1.0, -9.05, 4};
 float prev_pos[3];
 float in_center_pos[3];
-int restricted_area = 2;
+float colour_sense_pos[3];
+int restricted_area = 2; // 1 -> Right is restricted | 0 -> left is restricted | 2 -> Neither
 char input;
 
 //cubes
@@ -49,31 +65,57 @@ float *boxes_right[6] = {box_r_right,box_R_right,box_g_right,box_G_right,box_b_r
 void setup()
 {
   Serial.begin(9600);
-  delay(2000);
 
   //  Objects init 
   robot Bot;
-  edge_detector edge_storage_1(A0);
+  edge_detector edge_storage_1(A0); 
   edge_detector edge_storage_2(A1);
   edge_detector edge_robot_side(A5);
   edge_detector edge_robot_top(A3);
   colour_sensor bot_colour_sensor(A4);
   limit_switch  limit(7);
 
-  float * pnt;
+  // temporary variables for 
+  // storing point locations
+  float * pnt_1;
+  float * pnt_2;
+
+  // go to color sensor calibration location
+  Bot.write_servo(120, 0, 3);
+  Bot.calc_IK(col_calib_pos);
+  Bot.write_angles();
+  delay(2000);
+
+  Serial.println("Would you like to calibrate colour sensor? (y/n)");
+  while (!Serial.available())
+  {}
+
+  // calibrate colour sensor
+  bot_colour_sensor.calibrate();
+  delay(2000);
+  Serial.println("Colour calibration done..");
+  bot_colour_sensor.leds_togle(0);
+  delay(2000);
+
+  Serial.end();
+  Serial.begin(9600);
 
   // go to center
   Bot.calc_IK(center_pos);
   Bot.write_angles();
-  Bot.write_servo(0, 0, 3);
+  Bot.write_servo(100, 0, 3);
 
   Serial.print("Would you like to find box task? (y/n)");
   while (!Serial.available())
   {}
 
   // find box until position is sure (sets restricted area)
-  find_box(Bot, edge_storage_1, edge_storage_2);
+  while (restricted_area  > 1)
+  {
+    find_box(Bot, edge_storage_1, edge_storage_2);
+  }
 
+  // refresh serial interface
   Serial.end();
   Serial.begin(9600);
   delay(2000);
@@ -92,16 +134,17 @@ void setup()
 
   while (picked_cubes < num_cubes)
   {
+    // reset states
     cube_colour = 0;
     cube_size   = 2;
 
-    pnt = sweep(prev_pos, Bot, edge_robot_side, edge_robot_top);
+    pnt_1 = sweep(prev_pos, Bot, edge_robot_side, edge_robot_top);
 
     Serial.println("Found cube");
 
-    prev_pos[0] = *pnt;
-    prev_pos[1] = *(pnt+1);
-    prev_pos[2] = *(pnt+2);
+    prev_pos[0] = *pnt_1;
+    prev_pos[1] = *(pnt_1+1);
+    prev_pos[2] = *(pnt_1+2);
 
     // arduino is somehow passing via refrence
     // hence new pose
@@ -120,26 +163,27 @@ void setup()
     Serial.println(prev_pos[2]);
     
     // grab cube
-    pnt = grab_cube(in_center_pos, Bot, limit);
+    pnt_2 = grab_cube(in_center_pos, Bot, limit);
 
-    int colour_count = 0;
+    int colour_count = 0; // number of times to try
 
     // find colour until sure
     while (!cube_colour)
     {
       // update position
-      in_center_pos[0] = *pnt;
-      in_center_pos[1] = *(pnt+1);
-      in_center_pos[2] = *(pnt+2);
+      colour_sense_pos[0] = *pnt_2;
+      colour_sense_pos[1] = *(pnt_2+1);
+      colour_sense_pos[2] = *(pnt_2+2);
 
-      cube_colour = find_colour(in_center_pos, Bot, bot_colour_sensor, cube_colour);
-      bot_colour_sensor.led(cube_colour - 1, 1); // 1, 2, 3 -> R, G, B
-      Serial.println(cube_colour);
+      // 0 -> Ambient | 1 -> Red | 2 -> Green | 3 -> Blue
+      cube_colour = find_colour(colour_sense_pos, Bot, bot_colour_sensor, cube_colour);
       delay(1000);
 
       if (colour_count > 1 && cube_colour == 0 && cube_size < 2)
       {
-        cube_colour = 3;
+        // if there is a cube, but detects anbient
+        // it is probably blue
+        cube_colour = 3;  
       }
 
       if (cube_colour == 0 && cube_size > 1)
@@ -150,16 +194,21 @@ void setup()
       colour_count++;
     }
 
-    
-    Serial.println("Cube size: ");
-    if (cube_size) Serial.println("It's a BIG cube"); // Small -> 0 | Big -> 1
+    // show state
+    // by lighting appropriate LED
+    bot_colour_sensor.led(cube_colour - 1, 1);
+
+    // Small -> 0 | Big -> 1
+    if (cube_size) Serial.println("It's a BIG cube"); 
     else Serial.print("It's a SMALL cube");
 
+    // go back to center
     Bot.calc_IK(center_pos);
     Bot.write_angles();
     delay(2000);
 
-    //drop box
+    // drop box in storage
+    // increment number of picked cubes
     if (cube_size < 2)
     {
       if (restricted_area)
@@ -176,11 +225,11 @@ void setup()
       Bot.write_servo(120, 0, 3);
       delay(2000);
 
-      // increment cubes picked and reset
       picked_cubes++;
-      Bot.write_servo(0,0, 3);
     } 
 
+    // reset state
+    Bot.write_servo(0, 0, 3);
     bot_colour_sensor.leds_togle(0);
     Bot.calc_IK(center_pos);
     Bot.write_angles();
@@ -189,46 +238,11 @@ void setup()
 }
 
 /// functions
-///
-int place_cube(int cube_colour, int cube_size)
-{
-  if (cube_colour == 1)
-  {
-    if (!cube_size)
-    {
-      return 0;
-    }
-    else
-    {
-      return 1;
-    }
-  }
 
-  if (cube_colour == 2)
-  {
-    if (!cube_size)
-    {
-      return 2;
-    }
-    else
-    {
-      return 3;
-    }
-  }
-
-  if (cube_colour == 3)
-  {
-    if (!cube_size)
-    {
-      return 4;
-    }
-    else
-    {
-      return 5;
-    }
-  }
-}
-
+/// This function is a cube grabbing routine and 
+//  returns the coordiates of the of the EE at that
+//  location.
+//
 float * grab_cube(float pos[3], robot Bot,  limit_switch lim)
 {
   int angle;
@@ -250,6 +264,7 @@ float * grab_cube(float pos[3], robot Bot,  limit_switch lim)
   {
     angle = pick_up(Bot, lim);
 
+    // try again if no block in gripper
     if (angle <= 5)
     {
       // open claw
@@ -278,7 +293,7 @@ float * grab_cube(float pos[3], robot Bot,  limit_switch lim)
       }
     }
 
-    if (count > 2)
+    if (count > 3)
     {
       break;
     }
@@ -289,8 +304,7 @@ float * grab_cube(float pos[3], robot Bot,  limit_switch lim)
   }
   
   // determine size
-  Serial.println(angle);
-  cube_size = (angle < 30) ? 0 : 1;
+  cube_size = (angle < 27) ? 0 : 1;
   if (angle < 2) cube_size = 2;
 
   float * f = Bot.read_EE_pos();
@@ -301,6 +315,10 @@ float * grab_cube(float pos[3], robot Bot,  limit_switch lim)
   return return_coord;
 }
 
+/// This function is a cube pick up routine and
+//  returns the angle of the gripper servo when the
+//  limit switch is triggered.
+//
 int pick_up(robot Bot, limit_switch lim)
 {
   Bot.write_servo(0, 25, 3);
@@ -309,7 +327,6 @@ int pick_up(robot Bot, limit_switch lim)
   
   while (read_angle != 0)
   {
-    // argumented function (check)
     if (lim.button_state()) 
     {
       Bot.stop_bot();
@@ -322,15 +339,12 @@ int pick_up(robot Bot, limit_switch lim)
   return read_angle;
 }
 
-int find_colour(float pos[3], robot &Bot, colour_sensor &colour, int cube_colour)
+/// This Function is a cube colour determinig routine.
+//  and it returns the color of the cube based on:
+//  0 -> Ambient | 1 -> Red | 2 -> Green | 3 -> Blue
+//
+int find_colour(float pos[3], robot &Bot, colour_sensor &bot_colour_sensor, int cube_colour)
 {
-  // retry TODO:
-  if (cube_colour >= 1)
-  {
-    Bot.write_servo(80, 0, 3);
-    delay(1000);
-  }
-
   // reinstantiate pos
   Bot.calc_IK(pos);
   Bot.write_angles();
@@ -360,19 +374,25 @@ int find_colour(float pos[3], robot &Bot, colour_sensor &colour, int cube_colour
   return col_indx;
 }
 
+/// This is a centering on block routine.
+//
 void center_on_block(float pos[3], robot Bot, edge_detector &edge_side, edge_detector &edge_top)
 {  
-
   int side = edge_side.is_below();
   int top  = edge_top.is_below();
   float read_angle;
-
-  float m;
+  float m; // slope from EE pose to base of bot
   
   // tuneable parameters
   int max_iter = 100; 
   int iter = 0;
   float step_size = 0.01;
+
+  // step size controller gains
+  int K_s1 = 15;
+  int K_s2 = 0.35;
+  int K_t1 = 5;
+  int K_t2 = 0.5;
 
   //If neither IR sensor sees an edge, the scanning routine should be resumed. 
   if (!side && !top) 
@@ -386,8 +406,8 @@ void center_on_block(float pos[3], robot Bot, edge_detector &edge_side, edge_det
     if (restricted_area)
     {
       // left side
-      pos[1] -= step_size * 10; // something to do with sweeping towards left 
-      pos[2] += step_size * 0.35;
+      pos[1] -= step_size * K_s1; // something to do with sweeping towards left 
+      pos[2] += step_size * K_s2;
       Bot.calc_IK(pos);
       Bot.write_angles();
       side = edge_side.is_below();
@@ -397,16 +417,12 @@ void center_on_block(float pos[3], robot Bot, edge_detector &edge_side, edge_det
     {
       // right side
       pos[1] -= step_size;
-      pos[2] += step_size * 0.35;
+      pos[2] += step_size * K_s2;
       Bot.calc_IK(pos);
       Bot.write_angles();
       side = edge_side.is_below();
       iter++;
     }
-    
-    Serial.println(" SIDE ");
-    Serial.print(side);
-    Serial.println(" ");
   }
 
   if (iter == max_iter)
@@ -423,26 +439,21 @@ void center_on_block(float pos[3], robot Bot, edge_detector &edge_side, edge_det
   
  while(!top && (iter < max_iter))
  {
-   pos[0] -= step_size * 5; 
+   pos[0] -= step_size * K_t1; 
    pos[1] = m * pos[0];
-   pos[2] += step_size * 0.5;
+   pos[2] += step_size * K_t2;
    Bot.calc_IK(pos);
    Bot.write_angles();
    top = edge_top.is_below();
    iter++;
-
-   Serial.println(" TOP ");
-   Serial.print(edge_top.get_measure());
-   Serial.println(" ");
  }
 
   // go ahead a little for
   // better position tuning
   delay(500);
-  pos[0] += 1; 
+  pos[0] += 1.3; 
   pos[1] = m * pos[0];
   Bot.calc_IK(pos);
-  
   Bot.write_angles();
   
   if (iter == max_iter)
@@ -457,6 +468,10 @@ void center_on_block(float pos[3], robot Bot, edge_detector &edge_side, edge_det
   }
 }
 
+/// This is a sweep routine and it returns
+//  the current EE position when the IR sensors on 
+//  the robot sense that there is a cube beneath.
+//
 float * sweep(float start_coord[3], robot Bot, edge_detector &edge1, edge_detector &edge2)
 {
   float end_x;
@@ -466,8 +481,8 @@ float * sweep(float start_coord[3], robot Bot, edge_detector &edge1, edge_detect
   int check = 0;
   int calib_edge;
   
-  float begin_coord[3] = {9.05, 0, 5.5};
-  float line_end_coord[3]   = {18.05, 0, 5.5};
+  float begin_coord[3]    = {9.05, 0, 5.5};
+  float line_end_coord[3] = {18.05, 0, 5.5};
   static float return_coord[3];
   end_x = line_end_coord[0];
 
@@ -490,23 +505,26 @@ float * sweep(float start_coord[3], robot Bot, edge_detector &edge1, edge_detect
   // line variables
   float sweep_to = (!restricted_area) ? 63 : -63;
 
+
+  // tunable height parameters (z - axis)
+  // due to bad robot mechanics.
   while (begin_coord[0] <= end_x)
   {
     if (begin_coord[0] >= 15.05)
     {
-      begin_coord[2] = 4.9;
+      begin_coord[2] = 4.7;
     }
     else if (begin_coord[0] >= 13.05 && begin_coord[0] < 15.05)
     {
-      begin_coord[2] = 5;
+      begin_coord[2] = 4.9;
     }
     else if (begin_coord[0] < 13.05 && begin_coord[0] >= 10.05)
     {
-      begin_coord[2] = 5.1;
+      begin_coord[2] = 5.3;
     }
     else
     {
-      begin_coord[2] = 5.3;
+      begin_coord[2] = 5.45;
     }
       
     Bot.print_coord(begin_coord, 2);
@@ -542,6 +560,8 @@ float * sweep(float start_coord[3], robot Bot, edge_detector &edge1, edge_detect
     {
       read_angle = Bot.read_angle(0);
       
+      // if block is below
+      // stop the bot
       if (edge1.is_below())
       {
         // return current pos
@@ -568,6 +588,8 @@ float * sweep(float start_coord[3], robot Bot, edge_detector &edge1, edge_detect
   }
 }
 
+/// This is a storage box finding routine.
+//
 void find_box(robot &Bot, edge_detector edge1, edge_detector edge2)
 {
   // go to min dist
@@ -579,16 +601,16 @@ void find_box(robot &Bot, edge_detector edge1, edge_detector edge2)
   sweep_to_box(start_coord_bot_1, Bot, edge2, 0);
   Bot.stop_bot();
 
-   if (restricted_area > 1)
-   {
-     // sweep other half length because box not found
-     sweep_to_box(start_coord_bot_2, Bot, edge2, 1);
-     Bot.stop_bot();
-   }
-
-  Serial.println(restricted_area);
+  // only sweep right half if not box on left 
+  if (restricted_area > 1)
+  {
+    sweep_to_box(start_coord_bot_2, Bot, edge2, 1);
+    Bot.stop_bot();
+  }
 }
 
+/// This is a find_box helper routine.
+//
 void sweep_to_box(float begin_coord[3], robot Bot, edge_detector edge, int top_bot)
 {
   float read_angle;
@@ -651,6 +673,49 @@ void sweep_to_box(float begin_coord[3], robot Bot, edge_detector edge, int top_b
 
     read_angle = Bot.read_angle(0);
   }  
+}
+
+/// This function returns the appropriate index
+//  of the boxes_left or boxes_right array
+//  that hold the particular drop location.
+// 
+int place_cube(int cube_colour, int cube_size)
+{
+  if (cube_colour == 1)
+  {
+    if (!cube_size)
+    {
+      return 0;
+    }
+    else
+    {
+      return 1;
+    }
+  }
+
+  if (cube_colour == 2)
+  {
+    if (!cube_size)
+    {
+      return 2;
+    }
+    else
+    {
+      return 3;
+    }
+  }
+
+  if (cube_colour == 3)
+  {
+    if (!cube_size)
+    {
+      return 4;
+    }
+    else
+    {
+      return 5;
+    }
+  }
 }
 
 void loop()

@@ -1,3 +1,15 @@
+/**************************************************************************/
+/*
+@file     robot.h
+@authors   Laksh Jaisinghani and Harris Bayly 
+
+Robot mechanics.
+
+@section  HISTORY
+v1.0
+*/
+/**************************************************************************/
+
 #ifndef robot_h
 #define robot_h
 

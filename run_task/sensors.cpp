@@ -1,11 +1,26 @@
+/**************************************************************************/
+/*
+@file     sensors.cpp
+@authors   Laksh Jaisinghani and Harris Bayly 
+
+Sensor functonalies.
+
+@section  HISTORY
+v1.0
+*/
+/**************************************************************************/
+
 #include "Arduino.h"
 #include "sensors.h"
 
+/// init
 edge_detector::edge_detector(int pin)
 {
     _pin = pin;
 }
 
+/// reads the aveaged (5 pnts) analog value
+/// from the edge detector
 float edge_detector::get_measure()
 {
     float val = 0;
@@ -18,6 +33,7 @@ float edge_detector::get_measure()
     return val/5.0;
 }
 
+/// sets edge detector thresholds
 void edge_detector::calibrate(int type)
 {
     float val = 0;
@@ -42,6 +58,7 @@ void edge_detector::calibrate(int type)
     
 }
 
+/// returns true if there is an object below the IR sensor
 int edge_detector::is_below()
 {
     float val = get_measure();
@@ -52,18 +69,22 @@ int edge_detector::is_below()
     return (diff > 100) ? 1 : 0;
 }
 
+/// init
 limit_switch::limit_switch(int pin)
 {
     _pin = pin;
     pinMode(_pin, INPUT);
 }
 
+/// returns true is switch is high
 int limit_switch::button_state()
 {
+    delay(500);
     int state = digitalRead(_pin);
     return state;
 }
 
+/// init
 colour_sensor::colour_sensor(int pin)
 {
     pinMode(_R_pin, OUTPUT);
@@ -72,6 +93,7 @@ colour_sensor::colour_sensor(int pin)
     _pin = pin;
 }
 
+/// return min index
 int colour_sensor::arr_minDex(int arr[])
 {
     // Find the minimum squared error 
@@ -89,6 +111,9 @@ int colour_sensor::arr_minDex(int arr[])
   return minDex;
 }
 
+/// returns index of depending 
+/// on particular color.
+/// 0 -> Ambient | 1 -> Red | 2 -> Green | 3 -> Blue
 int colour_sensor::colourId()
 {
     int abs_error_vec[4] = {0,0,0,0};
@@ -120,6 +145,8 @@ int colour_sensor::colourId()
     return minDex;
 }
 
+
+/// sets calibration baselines
 void colour_sensor::getBaseline(int *colourVec)
 {
     int sample;
@@ -141,6 +168,7 @@ void colour_sensor::getBaseline(int *colourVec)
     }
 }
 
+/// prints calibration baselines
 void colour_sensor::printBaselines(int *colourVec)
 {
     for (int col = 0; col < 4; col++)
@@ -149,6 +177,9 @@ void colour_sensor::printBaselines(int *colourVec)
     }
 }
 
+/// calibration routine 
+/// NOTE: sometimes causes memory leaks
+/// in Arduino.
 void colour_sensor::calibrate()
 {
     Serial.println("Please remove all blocks from colour sensor, ambient test starts in 5 seconds\n");
@@ -169,22 +200,24 @@ void colour_sensor::calibrate()
     getBaseline(argbCalibrationVals[3]);
 
     // calibration output
-//     Serial.write("No Block Responses to Null, R, G ,B:");
-//     printBaselines(argbCalibrationVals[0]);
-//     Serial.println("Red Block Responses to Null, R, G ,B:");
-//     printBaselines(argbCalibrationVals[1]);
-//     Serial.println("Green Block Responses to Null, R, G, B");
-//     printBaselines(argbCalibrationVals[2]);
-//     Serial.println("Blue Block Responses to Null, R, G, B");
-//     printBaselines(argbCalibrationVals[3]);
+    //     Serial.write("No Block Responses to Null, R, G ,B:");
+    //     printBaselines(argbCalibrationVals[0]);
+    //     Serial.println("Red Block Responses to Null, R, G ,B:");
+    //     printBaselines(argbCalibrationVals[1]);
+    //     Serial.println("Green Block Responses to Null, R, G, B");
+    //     printBaselines(argbCalibrationVals[2]);
+    //     Serial.println("Blue Block Responses to Null, R, G, B");
+    //     printBaselines(argbCalibrationVals[3]);
 }
 
+/// set a particular LED on or off
 void colour_sensor::led(int ind, int on_off)
 {
     // {r, g, b}
     digitalWrite(led_pins[ind], on_off);
 }
 
+/// toggle all LEDs on or off
 void colour_sensor::leds_togle(int on_off)
 {
     led(0, on_off);

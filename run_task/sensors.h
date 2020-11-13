@@ -1,3 +1,15 @@
+/**************************************************************************/
+/*
+@file     sensors.h
+@authors   Laksh Jaisinghani and Harris Bayly 
+
+Robot sensor definations.
+
+@section  HISTORY
+v1.0
+*/
+/**************************************************************************/
+
 #ifndef sensors_h
 #define sensors_h
 
@@ -35,7 +47,7 @@ class colour_sensor
         int _B_pin = 3;
         int _pin;
 
-        int argbCalibrationVals[4][4] = {{769, 936, 946, 896},{622, 970, 933, 838},{591, 943, 968, 943},{530, 902, 931, 888}}; 
+        int argbCalibrationVals[4][4] = {{820, 949, 959, 916},{674, 977, 940, 855},{667, 952, 975, 953},{538, 908, 937, 894}}; 
         int testCases[4][3] = {{0, 0, 0},{1, 0 ,0}, {0, 1, 0},{0, 0, 1}};
         int led_pins[3] = {_R_pin, _G_pin, _B_pin};
     

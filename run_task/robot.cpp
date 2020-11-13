@@ -1,8 +1,22 @@
+/**************************************************************************/
+/*
+@file     robot.cpp
+@authors   Laksh Jaisinghani and Harris Bayly 
+
+Robot mechanics.
+
+@section  HISTORY
+v1.0
+*/
+/**************************************************************************/
+
+
 #include "Arduino.h"
 #include "robot.h"
 #include "VarSpeedServo.h"
 #include "sensors.h"
 
+/// init
 robot::robot()
 {
     // set up servo motors 
@@ -67,7 +81,6 @@ void robot::stop_bot()
 
 /// Adds servo offsets and 
 /// writes angles
-// TODO: if servo == base;
 void robot::write_servo(int angle, int s_speed, int servo_ind)
 {
     float s_angle = angle;
@@ -97,6 +110,7 @@ void robot::write_servo(int angle, int s_speed, int servo_ind)
     servos[servo_ind].write(s_angle, s_speed);
 }
 
+/// Prints coord based on type (id)
 void robot::print_coord(float coord[3], int id)
 {
   String coord_type;
@@ -167,6 +181,8 @@ float * robot::line(float start_p[], float end_p[], float angle)
     }
 }
 
+/// Updates joint angles and end effector postion.
+/// only for keeping variables on track.
 void robot::update_joint_angles()
 {
     float servo_angles[3];
@@ -181,6 +197,8 @@ void robot::update_joint_angles()
     calc_IK(endEffectorPos);
 }
 
+/// Reads a particular servo angle and
+/// removes the added offset.
 float robot::read_angle(int id)
 {
     switch(id)
@@ -206,11 +224,13 @@ float robot::read_angle(int id)
     } 
 }
 
+/// reads the base joint angle
 float robot::read_joint_angles()
 {
     return jointAngles[0];
 }
 
+/// reads ed effector position
 float * robot::read_EE_pos()
 {
     update_joint_angles();
