@@ -3,6 +3,8 @@ This project involves building a robot arm “manipulator” that can locate and
 coloured object from one place to another place within its workspace. The object will need
 to be placed in a container with different compartment based on the size of the object.
 
+Working: https://youtu.be/DJXzEvkOSws
+
 # Inital CAD
 ![Image of CAD Robot arm](images/bot_CAD_1.png)
 
